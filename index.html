@@ -189,6 +189,7 @@ details.more>summary{min-height:44px;display:flex;align-items:center}
 .checks input{width:26px;height:26px}
 .timer button{min-height:44px;min-width:44px}
 nav.tabs button{min-height:44px}
+.lems{display:grid;gap:8px}.lem{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:center}.lem input[type=checkbox]{width:22px;height:22px}.lem input[type=time]{width:auto}
 button.dangerb{color:#dc2626;border-color:#dc2626;margin-left:auto}
 .danger{position:fixed;inset:0;z-index:100;background:#b91c1c;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px 16px}
 .danger[hidden]{display:none}
@@ -444,6 +445,7 @@ function render(fromSnap){
   if(fromSnap&&document.activeElement&&app.contains(document.activeElement)&&document.activeElement.matches("input,select"))return;
   try{localStorage.setItem(LS+"-tab",S.tab)}catch(e){}
   (VIEWS[S.tab]||VIEWS.hoje)();
+  if(PWA)appInfo();
 }
 
 function totaisDia(iso){const d=S.days[iso];const t={kcal:0,p:0,c:0,g:0};(d?.refeicoes||[]).forEach(m=>{t.kcal+=+m.kcal||0;t.p+=+m.p||0;t.c+=+m.c||0;t.g+=+m.g||0});return t}
@@ -693,12 +695,13 @@ function vSemana(){app.innerHTML=`<div class="stack" id="wPlano"></div><div clas
 function vMais(){
   app.innerHTML=`<details class="sec" id="dSupl" ${S.open.supl?"open":""}><summary><h2>Suplementos <small>creatina, whey, links e cupons</small></h2></summary><div class="secbody" id="wSupl"></div></details>
   <details class="sec" id="dPerf" ${S.open.perf?"open":""}><summary><h2>Meus dados <small>peso, altura e metas</small></h2></summary><div class="secbody" id="wPerf"></div></details>
+  <details class="sec" id="dLem" ${S.open.lem?"open":""}><summary><h2>Lembretes <small>lanches, refeições e creatina</small></h2></summary><div class="secbody" id="wLem"></div></details>
   <details class="sec" id="dBkp" ${S.open.bkp?"open":""}><summary><h2>Backup <small>levar seus dados para outro lugar</small></h2></summary><div class="secbody">
     <p class="small muted">Exporte um arquivo com treinos, refeições, peso e suplementos. Importe esse arquivo ${PWA?"aqui":"no app instalável"} para continuar de onde parou.</p>
     <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="bkExp">Exportar dados</button><button class="ghost" id="bkImpB">Importar arquivo</button><input type="file" id="bkImp" accept=".json,application/json" hidden></div>
   </div></details>`;
   vSupl(document.getElementById("wSupl"));vPerfil(document.getElementById("wPerf"));
-  dSupl.ontoggle=()=>{S.open.supl=dSupl.open};dPerf.ontoggle=()=>{S.open.perf=dPerf.open};dBkp.ontoggle=()=>{S.open.bkp=dBkp.open};
+  dSupl.ontoggle=()=>{S.open.supl=dSupl.open};dPerf.ontoggle=()=>{S.open.perf=dPerf.open};dBkp.ontoggle=()=>{S.open.bkp=dBkp.open};dLem.ontoggle=()=>{S.open.lem=dLem.open};vLembretes(wLem);
   bkExp.onclick=exportar;bkImpB.onclick=()=>bkImp.click();bkImp.onchange=()=>{const f=bkImp.files[0];if(f)importar(f);bkImp.value=""};
 }
 
@@ -761,6 +764,74 @@ function confirmar2(titulo,texto,acao){
   });
 }
 
+// ---------- Lembretes, contador no ícone, atalhos e foto compartilhada (só no app instalado) ----------
+const LEM_PADRAO=[
+  {id:"cafe",hora:"07:00",txt:"Café da manhã (pré-treino)",on:false,dias:"todos"},
+  {id:"almoco",hora:"12:00",txt:"Almoço (pós-treino)",on:false,dias:"todos"},
+  {id:"creatina",hora:"12:15",txt:"Tomou a creatina?",on:true,dias:"todos"},
+  {id:"lanche1",hora:"16:30",txt:"Hora do lanche: banana + pão com pasta de amendoim",on:true,dias:"util"},
+  {id:"lanche2",hora:"18:30",txt:"Hora do lanche: leite ou iogurte + amendoim",on:true,dias:"util"},
+  {id:"jantar",hora:"19:50",txt:"Jantar: veja sua escolha no app",on:false,dias:"util"}];
+function lemLoad(){try{const j=JSON.parse(localStorage.getItem(LS+"-lembretes")||"null");if(Array.isArray(j))return LEM_PADRAO.map(d=>({...d,...(j.find(x=>x.id===d.id)||{})}))}catch(e){}return LEM_PADRAO.map(d=>({...d}))}
+let LEM=lemLoad();
+function lemSave(){try{localStorage.setItem(LS+"-lembretes",JSON.stringify(LEM))}catch(e){}appInfo()}
+// O que já foi feito hoje (para não lembrar do que já marcou)
+function feitosHoje(){const iso=hojeISO(),d=S.days[iso]||{};const ids=(d.refeicoes||[]).filter(m=>m.plano).map(m=>m.plano);if(d.supl?.creatina)ids.push("creatina");return ids}
+function avisados(){try{const j=JSON.parse(localStorage.getItem(LS+"-avisados")||"{}");return j.data===hojeISO()?j.ids:[]}catch(e){return []}}
+function lemDevidos(agora=new Date()){
+  const iso=hojeISO(),w=agora.getDay(),util=w>=1&&w<=5,min=agora.getHours()*60+agora.getMinutes(),fe=feitosHoje(),av=avisados();
+  return LEM.filter(l=>{if(!l.on||(l.dias==="util"&&!util)||fe.includes(l.id)||av.includes(l.id))return false;
+    const [h,m]=l.hora.split(":").map(Number),t=h*60+m;return min>=t&&min<t+120});
+}
+async function lemDisparar(){
+  if(!PWA||!SWR||!window.Notification||Notification.permission!=="granted")return;
+  const due=lemDevidos();if(!due.length)return;const av=avisados();
+  for(const l of due){av.push(l.id);try{await SWR.showNotification(l.txt,{tag:"lem-"+l.id,body:"Toque para abrir e marcar no app.",icon:"icon-192.png",badge:"badge.png",data:{url:"./?acao=refeicao"}})}catch(e){}}
+  try{localStorage.setItem(LS+"-avisados",JSON.stringify({data:hojeISO(),ids:av}))}catch(e){}
+  appInfo();
+}
+// Estado que o service worker lê para lembrar com o app fechado (quando o Android deixar)
+async function appInfo(){
+  if(!PWA)return;
+  const iso=hojeISO(),w=wd(iso),plano=planoRefeicoes(iso).map(r=>r.id),fe=feitosHoje(),falta=plano.filter(id=>!fe.includes(id)).length;
+  try{if(navigator.setAppBadge){falta?navigator.setAppBadge(falta):navigator.clearAppBadge()}}catch(e){}
+  try{const c=await caches.open("treino-estado");await c.put("./__estado",new Response(JSON.stringify({data:iso,lembretes:LEM,feitos:fe,avisados:avisados(),falta})))}catch(e){}
+}
+setInterval(lemDisparar,30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")lemSyncAvisados()});
+// avisos mostrados pelo service worker com o app fechado
+async function lemSyncAvisados(){try{const c=await caches.open("treino-estado"),r=await c.match("./__estado");if(!r)return;const j=await r.json();
+  if(j.data===hojeISO()&&Array.isArray(j.avisados)){const av=[...new Set([...avisados(),...j.avisados])];localStorage.setItem(LS+"-avisados",JSON.stringify({data:hojeISO(),ids:av}))}}catch(e){}}
+async function lemPeriodico(){
+  try{if(!SWR||!SWR.periodicSync)return "sem";const st=await navigator.permissions.query({name:"periodic-background-sync"});
+    if(st.state!=="granted")return "negado";await SWR.periodicSync.register("lembretes",{minInterval:15*60*1000});return "ok"}catch(e){return "sem"}
+}
+function vLembretes(root){
+  if(!PWA){root.innerHTML=`<p class="small muted">Os lembretes funcionam só no app instalado (joedsoncc.github.io/Treino).</p>`;return}
+  const perm=window.Notification?Notification.permission:"unsupported";
+  root.innerHTML=`<p class="small muted">Com o app aberto ou em segundo plano o aviso chega na hora. Com o app fechado, quem decide é o Android: pode chegar atrasado ou não chegar. O lembrete não aparece se você já marcou a refeição ou a creatina.</p>
+  ${perm!=="granted"?`<div class="row"><button class="btn" id="lemPerm">Permitir notificações</button></div>`:""}
+  <div class="lems">${LEM.map((l,i)=>`<label class="lem"><input type="checkbox" data-lon="${i}" ${l.on?"checked":""}><input type="time" data-lh="${i}" value="${l.hora}" aria-label="Horário: ${esc(l.txt)}"><span>${esc(l.txt)}<small class="muted"> · ${l.dias==="util"?"seg a sex":"todo dia"}</small></span></label>`).join("")}</div>
+  <div class="row"><button class="ghost" id="lemTeste">Testar notificação</button></div>`;
+  root.querySelectorAll("[data-lon]").forEach(c=>c.onchange=()=>{LEM[+c.dataset.lon].on=c.checked;lemSave()});
+  root.querySelectorAll("[data-lh]").forEach(c=>c.onchange=()=>{if(c.value){LEM[+c.dataset.lh].hora=c.value;lemSave();toast("Horário salvo")}});
+  if(window.lemPerm)lemPerm.onclick=async()=>{await notifPedir();await lemPeriodico();render()};
+  lemTeste.onclick=async()=>{await notifPedir();if(!SWR||Notification.permission!=="granted"){toast("Permita as notificações primeiro");return}
+    SWR.showNotification("Lembrete de teste",{tag:"lem-teste",body:"É assim que os lembretes vão aparecer.",icon:"icon-192.png",badge:"badge.png"});lemPeriodico()};
+}
+// Atalhos do ícone (?acao=treino | refeicao) e foto recebida pelo menu Compartilhar (?acao=cardapio)
+async function acaoInicial(){
+  const a=new URLSearchParams(location.search).get("acao");if(!a)return;
+  try{history.replaceState(null,"",location.pathname)}catch(e){}
+  const vai=t=>{S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t))};
+  if(a==="treino"){vai("hoje");S.date=hojeISO();S.open.treino=true;render();wkStart();document.getElementById("secTreino")?.scrollIntoView({block:"start"})}
+  else if(a==="refeicao"){vai("hoje");S.date=hojeISO();S.open.alim=true;render();const el=document.getElementById("secAlim");el?.scrollIntoView({block:"start"})}
+  else if(a==="cardapio"){vai("semana");render();
+    try{const c=await caches.open("treino-estado"),r=await c.match("./__compartilhado");if(!r){toast("Não recebi a foto. Tente compartilhar de novo.");return}
+      const b=await r.blob();await c.delete("./__compartilhado");await salvarFotoCardapio(new File([b],"cardapio",{type:b.type||"image/jpeg"}));
+      document.getElementById("wMenu")?.scrollIntoView({block:"start"})}catch(e){toast("Não consegui abrir a foto.")}}
+}
+
 // ---------- Sequência ----------
 function addDias(iso,n){const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function wd(iso){return new Date(iso+"T12:00:00").getDay()}
@@ -820,12 +891,14 @@ function vCardapio(root=app){
     <div class="row"><button class="btn" id="salvarMenu">Salvar semana</button><span class="small muted">A escolha do dia aparece na aba Hoje.</span></div>
   </section>`;
   salvarMenu.onclick=()=>{m.semana=mSem.value.trim();m.ini=hojeISO()>(m.ini||"")?hojeISO():m.ini;m.escolhas={};[1,2,3,4,5].forEach(i=>m.escolhas[i]=document.getElementById("pk"+i).value.trim());saveMenu();toast("Semana salva")};
-  if(window.mFile)mFile.onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  if(window.mFile)mFile.onchange=e=>{const f=e.target.files[0];if(f)salvarFotoCardapio(f,mSem.value.trim())};
+}
+async function salvarFotoCardapio(f,semana){const m=S.menu;
     if(S.mode==="db"&&S.assets){toast("Enviando…");
-      try{const r=await S.assets.upload(f);const old=m.assetId;m.assetId=r.id;m.ini=hojeISO();m.isPdf=r.contentType==="application/pdf";delete m.localImg;m.semana=mSem.value.trim()||m.semana;await saveMenu();
+      try{const r=await S.assets.upload(f);const old=m.assetId;m.assetId=r.id;m.ini=hojeISO();m.isPdf=r.contentType==="application/pdf";delete m.localImg;m.semana=semana||m.semana;await saveMenu();
         if(old&&old!==r.id&&old!==DEFAULT_MENU.assetId)S.assets.delete(old).catch(()=>{});toast("Cardápio salvo");render()}
       catch(err){toast(err&&err.code==="too_large"?"Arquivo grande demais (máx. 20 MB).":err&&err.code==="unsupported_type"?"Use uma foto PNG, JPG ou PDF.":"Não enviou. Tente de novo.")}}
-    else{const fr=new FileReader();fr.onload=()=>{m.localImg=fr.result;m.assetId=null;m.ini=hojeISO();m.isPdf=f.type==="application/pdf";lsSave();toast("Cardápio salvo neste navegador");render()};fr.readAsDataURL(f)}};
+    else{const fr=new FileReader();fr.onload=()=>{m.localImg=fr.result;m.assetId=null;m.ini=hojeISO();m.isPdf=f.type==="application/pdf";if(semana)m.semana=semana;lsSave();toast(PWA?"Cardápio salvo":"Cardápio salvo neste navegador");render()};fr.readAsDataURL(f)}
 }
 
 // ---------- Suplementos ----------
@@ -960,4 +1033,5 @@ function vPerfil(root=app){
 }
 
 init();
+if(PWA)setTimeout(acaoInicial,300);
 </script>
