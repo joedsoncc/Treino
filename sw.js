@@ -1,5 +1,5 @@
 // Cache para abrir sem internet + clique na notificação abre o app
-const C="treino-736f9089d0";
+const C="treino-64e7d9c75c";
 const FILES=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","badge.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

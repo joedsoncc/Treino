@@ -189,6 +189,17 @@ details.more>summary{min-height:44px;display:flex;align-items:center}
 .checks input{width:26px;height:26px}
 .timer button{min-height:44px;min-width:44px}
 nav.tabs button{min-height:44px}
+button.dangerb{color:#dc2626;border-color:#dc2626;margin-left:auto}
+.danger{position:fixed;inset:0;z-index:100;background:#b91c1c;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.danger[hidden]{display:none}
+.danger .dbox{max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center}
+.danger .dico{width:64px;height:64px;border-radius:50%;border:4px solid #fff;font:800 40px/56px var(--display);margin:0 auto}
+.danger h2{font-family:var(--display);font-size:30px;line-height:1.1;margin:0;text-transform:uppercase;color:#fff}
+.danger p{margin:0;font-size:16px}.danger .dstep{font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.06em;font-size:13px}
+.danger .dacts{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.danger button{font:inherit;font-weight:700;font-size:17px;border-radius:10px;padding:14px;cursor:pointer}
+#dgOk{background:#fff;color:#b91c1c;border:0}#dgOk:disabled{opacity:.55;cursor:default}
+#dgNo{background:transparent;color:#fff;border:2px solid #fff}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;z-index:9}
 .note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -207,6 +218,11 @@ nav.tabs button{min-height:44px}
 
 <main class="wrap" id="app"></main>
 <div class="toast" id="toast" hidden></div>
+<div class="danger" id="danger" hidden role="alertdialog" aria-modal="true" aria-labelledby="dgT"><div class="dbox">
+  <div class="dico" aria-hidden="true">!</div><p class="dstep" id="dgS">Etapa 1 de 2</p>
+  <h2 id="dgT"></h2><p id="dgX"></p>
+  <div class="dacts"><button id="dgOk"></button><button id="dgNo">Cancelar</button></div>
+</div></div>
 <div class="timer" id="timer" hidden role="timer" aria-live="polite"><i class="bar2" id="tBar"></i><div class="in">
   <div class="wk"><i class="dot"></i><span class="lb">Em treino</span><b id="wkEl">0:00</b></div>
   <div class="acts"><button id="wkFim">Finalizar</button><button id="wkX" aria-label="Ocultar a barra">×</button></div>
@@ -587,7 +603,7 @@ function vHoje(){
       ${exHtml}
       <label>Observações<input id="obs" value="${esc(dr.obs??salvo?.obs??"")}" placeholder="Ex.: dormi mal, ombro incomodou"></label>
       <p class="feitos small" id="feitos"></p>
-      <div class="row"><button class="btn" id="salvarTreino">${salvo?"Atualizar treino":"Salvar e finalizar treino"}</button>${salvo?`<button class="ghost" id="apagarTreino">Apagar treino do dia</button>`:""}</div>
+      <div class="row"><button class="btn" id="salvarTreino">${salvo?"Atualizar treino":"Salvar e finalizar treino"}</button>${salvo?`<button class="ghost dangerb" id="apagarTreino">Apagar treino do dia</button>`:""}</div>
     </div>
   </details>
 
@@ -637,7 +653,7 @@ function vHoje(){
     const d=getDay(iso);d.treino={sessao:sk,ex,obs:obs.value.trim()};delete d.rascunho;S.sessao=null;delete S.draft[dk];draftLsSave();clearTimeout(RS.t);S.open.treino=false;
     saveDay(iso);if(WK.start){const min=Math.round((Date.now()-WK.start)/60000);wkEnd();toast(`Treino salvo · ${min} min`)}else toast("Treino salvo");render();
   };
-  if(window.apagarTreino)apagarTreino.onclick=()=>{const d=getDay(iso);delete d.treino;saveDay(iso);toast("Treino apagado");render()};
+  if(window.apagarTreino)apagarTreino.onclick=async()=>{if(!await confirmar2("Apagar treino do dia?",`Você vai apagar o treino de ${fmtData(iso)} (${P.nome}): cargas, repetições e observações.`,"O treino"))return;const d=getDay(iso);delete d.treino;saveDay(iso);toast("Treino apagado");render()};
   app.querySelectorAll("[data-rest]").forEach(b=>b.onclick=()=>startRest(+b.dataset.rest));
   // Botão "Feito" por exercício: recolhe o exercício e mostra o resumo; tocar de novo reabre
   const resumoEx=i=>{const kg=(document.getElementById(`kg-${i}`)?.value||"").trim(),bw=!!document.querySelector(`#ex-${i} .bw`);
@@ -669,7 +685,7 @@ function vHoje(){
     if(!mNome.value.trim()&&!n(mK.value)){toast("Digite o nome e as calorias");return}
     getDay(iso).refeicoes.push({nome:mNome.value.trim()||"Refeição",kcal:n(mK.value),p:n(mP.value),c:n(mC.value),g:n(mG.value)});
     saveDay(iso);toast("Adicionado");render();};
-  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{getDay(iso).refeicoes.splice(+b.dataset.del,1);saveDay(iso);render()});
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{const m=getDay(iso).refeicoes[+b.dataset.del];if(!m||!await confirmar2("Apagar refeição?",`Você vai apagar "${m.nome}" (${r0(m.kcal)} kcal) de ${fmtData(iso)}.`,"A refeição"))return;getDay(iso).refeicoes.splice(+b.dataset.del,1);saveDay(iso);render()});
 }
 
 // ---------- Semana e Mais (agrupam telas) ----------
@@ -697,10 +713,11 @@ async function exportar(){
 }
 function importar(f){
   const fr=new FileReader();
-  fr.onload=()=>{let j;try{j=JSON.parse(fr.result)}catch(e){toast("Arquivo inválido");return}
+  fr.onload=async()=>{let j;try{j=JSON.parse(fr.result)}catch(e){toast("Arquivo inválido");return}
     if(!j||j.app!=="caderno-de-treino"||typeof j.days!=="object"){toast("Esse arquivo não é um backup do app");return}
     const n=Object.keys(j.days).length;
-    if(!confirm("Importar "+n+" dias? Dias com a mesma data serão substituídos."))return;
+    const iguais=Object.keys(j.days).filter(d=>S.days[d]).length;
+    if(iguais&&!await confirmar2("Substituir dados?",`O arquivo tem ${n} dias e ${iguais} deles já existem aqui. Os dias com a mesma data serão trocados pelos do arquivo.`,"O que está registrado nesses dias"))return;
     Object.entries(j.days).forEach(([iso,d])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(iso)&&d&&typeof d==="object"){S.days[iso]={...d,kind:"day",date:iso};saveDay(iso)}});
     if(j.profile&&typeof j.profile==="object"){const {kind,...p}=j.profile;S.profile={...DEFAULT_PROFILE,...p};saveProfile()}
     if(j.supl&&typeof j.supl==="object"){S.supl=j.supl;saveSupl()}
@@ -724,6 +741,25 @@ function flushRascunho(){
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushRascunho()});
 window.addEventListener("pagehide",flushRascunho);
+
+// Confirmação em duas etapas, em tela vermelha, antes de qualquer ação que apaga dados
+function confirmar2(titulo,texto,acao){
+  return new Promise(res=>{
+    let dgTimer;
+    const esc_=e=>{if(e.key==="Escape")fim(false)};
+    const fim=ok=>{danger.hidden=true;clearInterval(dgTimer);document.removeEventListener("keydown",esc_);res(ok)};
+    const etapa=n=>{
+      dgS.textContent=`Etapa ${n} de 2`;
+      if(n===1){dgT.textContent=titulo;dgX.textContent=texto;dgOk.textContent="Sim, quero apagar";dgOk.disabled=false;dgOk.onclick=()=>etapa(2)}
+      else{dgT.textContent="Tem certeza?";dgX.textContent="Isso não pode ser desfeito. "+acao+" será apagado de vez.";
+        let t=3;dgOk.disabled=true;dgOk.textContent=`Apagar de vez (${t})`;
+        dgTimer=setInterval(()=>{t--;if(t>0)dgOk.textContent=`Apagar de vez (${t})`;else{clearInterval(dgTimer);dgOk.disabled=false;dgOk.textContent="Apagar de vez"}},1000);
+        dgOk.onclick=()=>fim(true)}
+    };
+    dgNo.onclick=()=>fim(false);document.addEventListener("keydown",esc_);
+    etapa(1);danger.hidden=false;dgNo.focus();
+  });
+}
 
 // ---------- Sequência ----------
 function addDias(iso,n){const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
