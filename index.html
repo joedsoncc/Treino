@@ -190,6 +190,10 @@ details.more>summary{min-height:44px;display:flex;align-items:center}
 .timer button{min-height:44px;min-width:44px}
 nav.tabs button{min-height:44px}
 .lems{display:grid;gap:8px}.lem{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:center}.lem input[type=checkbox]{width:22px;height:22px}.lem input[type=time]{width:auto}
+/* App: tocar no texto não seleciona nem abre a busca do Android; campos de digitação continuam normais */
+html{-webkit-tap-highlight-color:transparent}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 button.dangerb{color:#dc2626;border-color:#dc2626;margin-left:auto}
 .danger{position:fixed;inset:0;z-index:100;background:#b91c1c;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px 16px}
 .danger[hidden]{display:none}

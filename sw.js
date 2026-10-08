@@ -1,5 +1,5 @@
 // Cache para abrir sem internet, foto recebida pelo Compartilhar, lembretes com o app fechado e clique na notificação
-const C="treino-3df14009b4",FONTES="treino-fontes",EST="treino-estado";
+const C="treino-9ddeea7d2f",FONTES="treino-fontes",EST="treino-estado";
 const FILES=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","badge.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("treino-")&&k!==C&&k!==FONTES&&k!==EST).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
