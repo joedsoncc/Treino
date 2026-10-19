@@ -384,13 +384,13 @@ Object.assign(HOW,{
 });
 function howHtml(nome){const h=HOW[nome];if(!h)return "";return `<details class="how"><summary>Como fazer</summary><ul>${h.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></details>`}
 
-// ---------- Cardápio do trabalho (semana 28/09 a 02/10) ----------
-const DEFAULT_MENU={kind:"cardapio",semana:"05/10 a 09/10",ini:"2026-10-05",assetId:"2c69981a4712006fd2594dc9deffc9c6",escolhas:{
-  "1":"Bife bovino ao molho roty + ovo frito + arroz + feijão",
-  "2":"Frango com brócolis + omelete com ervilhas + arroz + feijão",
-  "3":"Torta de frango + ovo frito + arroz + feijão + escarola",
-  "4":"Frango assado + iscas bovinas à chinesa + arroz + feijão",
-  "5":"Sassami grelhado + vagem sauté + arroz + feijão"}};
+// ---------- Cardápio do trabalho (semana 19/10 a 23/10) ----------
+const DEFAULT_MENU={kind:"cardapio",semana:"19/10 a 23/10",ini:"2026-10-19",assetId:"341de6e5fcf0deb35d8dc77ab4c12ea4",img:"cardapio.jpg",escolhas:{
+  "1":"Filé de frango ao molho de laranjas + omelete com milho verde + arroz + feijão",
+  "2":"Frango grelhado + ovo frito + arroz + feijão + brócolis com cenoura",
+  "3":"Carne de panela com legumes + ovo no vapor + arroz + feijão + escarola",
+  "4":"Frango xadrez + omelete verde + arroz + feijão + refogado verde",
+  "5":"Frango grelhado ao vinagrete + ovo frito + arroz + feijão"}};
 // um cardápio salvo de semana anterior dá lugar ao da semana atual
 function pickMenu(v){return v&&v.ini&&v.ini>=DEFAULT_MENU.ini?JSON.parse(JSON.stringify(v)):JSON.parse(JSON.stringify(DEFAULT_MENU))}
 
@@ -949,7 +949,7 @@ function jantarHoje(iso){const w=wd(iso),e=S.menu?.escolhas?.[w];if(!e)return ""
 
 // ---------- Cardápio ----------
 function vCardapio(root=app){
-  const m=S.menu, src=m.assetId&&!PWA?"/_blob/"+m.assetId:(m.localImg||null);
+  const m=S.menu, src=m.assetId&&!PWA?"/_blob/"+m.assetId:(m.localImg||(PWA&&m.img)||null);
   const podeEnviar=S.mode!=="db"||S.assets;
   root.innerHTML=`
   <section class="card">
