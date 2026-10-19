@@ -592,12 +592,20 @@ async function notif(fim){
     const sk=S.sessao||S.days[hojeISO()]?.treino?.sessao||sessaoDoDia(hojeISO()),nome=PLAN[sk]?.nome||"Treino";
     if(Date.now()-WK.start>5*3600e3){wkEnd();return}
     const resting=WK.restEnd!=null&&WK.restEnd>Date.now();
-    await SWR.showNotification(fim?"Próxima série! 💪":"Em treino · "+nome,{tag:"treino",renotify:!!fim,silent:!fim,requireInteraction:true,
-      body:(fim?nome+" · ":"")+"Iniciado às "+hhmm(WK.start)+(resting?" · Descanso até "+hhmm(WK.restEnd)+":"+String(new Date(WK.restEnd).getSeconds()).padStart(2,"0"):"")+"\nToque para abrir o app",
-      icon:"icon-192.png",badge:"badge.png",timestamp:WK.start,vibrate:fim?[300,150,300,150,500]:undefined,data:{url:"./"}});
+    const min=Math.floor((Date.now()-WK.start)/60000),dur=min<60?min+" min":Math.floor(min/60)+"h"+String(min%60).padStart(2,"0");
+    // exercícios feitos e o próximo, quando a tela do treino está aberta
+    const exs=[...document.querySelectorAll("#secTreino .ex")],nf=exs.filter(x=>x.classList.contains("feito")).length,prox=exs.find(x=>!x.classList.contains("feito"))?.querySelector(".exhead b")?.textContent;
+    const prog=exs.length?`${nf} de ${exs.length} feitos`+(prox?` · Próximo: ${prox}`:""):"";
+    const fimTxt=WK.restEnd?new Date(WK.restEnd).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
+    const titulo=fim?"Próxima série! 💪":resting?"⏱ Descanso até "+fimTxt:"🏋️ Em treino · "+nome;
+    const linhas=[(resting||fim?nome+" · ":"")+"Treino: "+dur+" (desde "+hhmm(WK.start)+")",prog,"Toque para abrir o app"].filter(Boolean);
+    await SWR.showNotification(titulo,{tag:"treino",renotify:!!fim,silent:!fim,requireInteraction:true,body:linhas.join("\n"),
+      icon:"icon-192.png",badge:"badge.png",timestamp:resting?WK.restEnd:WK.start,vibrate:fim?[300,150,300,150,500]:undefined,data:{url:"./"}});
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")notif()});
+// atualiza os minutos de treino na notificação enquanto o Android deixar o app rodando
+setInterval(()=>{if(WK.start&&!(WK.restEnd>Date.now()))notif()},60000);
 wkTick();
 
 function vHoje(){
@@ -730,7 +738,7 @@ function vHoje(){
     const i=+b.dataset.done,el=document.getElementById(`ex-${i}`),on=!el.classList.contains("feito");
     el.classList.toggle("feito",on);b.setAttribute("aria-pressed",on);b.textContent=on?"✓ Feito":"Concluir";
     document.getElementById(`exsum-${i}`).textContent=on?resumoEx(i):"";
-    (S.draft[dk]||(S.draft[dk]={...dr}))[`done-${i}`]=on?"1":"0";salvarRascunho(iso,sk,dk);contaFeitos();
+    (S.draft[dk]||(S.draft[dk]={...dr}))[`done-${i}`]=on?"1":"0";salvarRascunho(iso,sk,dk);contaFeitos();notif();
     if(on){if(!WK.start&&ehHoje)wkStart();const nx=document.getElementById(`ex-${i+1}`);if(nx&&!nx.classList.contains("feito"))nx.scrollIntoView({behavior:"smooth",block:"start"})}
   });
   app.querySelectorAll("[data-plan]").forEach(b=>b.onclick=()=>{
