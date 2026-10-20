@@ -585,17 +585,29 @@ let SWR=null;
 if(PWA&&"serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").then(r=>{SWR=r;notif()}).catch(()=>{})}
 async function notifPedir(){if(!PWA||!window.Notification)return;try{if(Notification.permission==="default")await Notification.requestPermission()}catch(e){}}
 function hhmm(t){const d=new Date(t);return d.getHours()+"h"+String(d.getMinutes()).padStart(2,"0")}
+// Progresso do treino de hoje a partir do que foi digitado (rascunho), mesmo com outra aba aberta
+let exAtual=null;
+function progressoTreino(sk){
+  const P=PLAN[sk];if(!P)return "";const h=hojeISO(),day=S.days[h];
+  const dr=S.draft[h+"|"+sk]||(day?.rascunho?.sessao===sk?day.rascunho.campos:{})||{};
+  const tem=(i,k)=>String(dr[`rp-${i}-${k}`]??"").trim()!=="";
+  const ok=i=>dr[`done-${i}`]==="1";
+  const nf=P.ex.filter((_,i)=>ok(i)).length;
+  let i=exAtual!=null&&exAtual<P.ex.length&&!ok(exAtual)?exAtual:P.ex.findIndex((_,j)=>!ok(j));
+  if(i<0)return `${nf} de ${P.ex.length} exercícios feitos 💪`;
+  const [nome,reps]=P.ex[i],tot=nSets(reps),fs=Array.from({length:tot},(_,k)=>tem(i,k)).filter(Boolean).length;
+  return `${nome}: ${fs>=tot?"séries completas":"série "+(fs+1)+" de "+tot}\n${nf} de ${P.ex.length} exercícios feitos`;
+}
 async function notif(fim){
   if(!PWA||!SWR||!window.Notification||Notification.permission!=="granted")return;
   try{
     if(!WK.start){(await SWR.getNotifications({tag:"treino"})).forEach(n=>n.close());return}
-    const sk=S.sessao||S.days[hojeISO()]?.treino?.sessao||sessaoDoDia(hojeISO()),nome=PLAN[sk]?.nome||"Treino";
+    const sk=S.sessao||S.days[hojeISO()]?.treino?.sessao||S.days[hojeISO()]?.rascunho?.sessao||sessaoDoDia(hojeISO()),nome=PLAN[sk]?.nome||"Treino";
     if(Date.now()-WK.start>5*3600e3){wkEnd();return}
     const resting=WK.restEnd!=null&&WK.restEnd>Date.now();
     const min=Math.floor((Date.now()-WK.start)/60000),dur=min<60?min+" min":Math.floor(min/60)+"h"+String(min%60).padStart(2,"0");
     // exercícios feitos e o próximo, quando a tela do treino está aberta
-    const exs=[...document.querySelectorAll("#secTreino .ex")],nf=exs.filter(x=>x.classList.contains("feito")).length,prox=exs.find(x=>!x.classList.contains("feito"))?.querySelector(".exhead b")?.textContent;
-    const prog=exs.length?`${nf} de ${exs.length} feitos`+(prox?` · Próximo: ${prox}`:""):"";
+    const prog=progressoTreino(sk);
     const fimTxt=WK.restEnd?new Date(WK.restEnd).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
     const titulo=fim?"Próxima série! 💪":resting?"⏱ Descanso até "+fimTxt:"🏋️ Em treino · "+nome;
     const linhas=[(resting||fim?nome+" · ":"")+"Treino: "+dur+" (desde "+hhmm(WK.start)+")",prog,"Toque para abrir o app"].filter(Boolean);
@@ -704,7 +716,8 @@ function vHoje(){
   </details>`;
 
   secTreino.ontoggle=()=>{S.open.treino=secTreino.open};secAlim.ontoggle=()=>{S.open.alim=secAlim.open};
-  secTreino.oninput=e=>{const t=e.target;if(/^(kg-|rp-|obs)/.test(t.id)){(S.draft[dk]||(S.draft[dk]={...dr}))[t.id]=t.value;salvarRascunho(iso,sk,dk);if(!WK.start&&ehHoje&&!salvo)wkStart()}};
+  secTreino.oninput=e=>{const t=e.target;if(/^(kg-|rp-|obs)/.test(t.id)){(S.draft[dk]||(S.draft[dk]={...dr}))[t.id]=t.value;salvarRascunho(iso,sk,dk);if(!WK.start&&ehHoje&&!salvo)wkStart();
+    const m=t.id.match(/^(?:kg|rp)-(\d+)/);if(m)exAtual=+m[1];clearTimeout(RS.nt);RS.nt=setTimeout(notif,800)}};
   if(window.iniciarTreino)iniciarTreino.onclick=()=>{wkStart();iniciarTreino.textContent="Treino em andamento"};
   dia.onchange=e=>{S.date=e.target.value||hojeISO();S.sessao=null;S.open={};render()};
   if(window.voltarHoje)voltarHoje.onclick=()=>{S.date=hojeISO();S.sessao=null;S.open={};render()};
