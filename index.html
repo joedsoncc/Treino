@@ -302,7 +302,7 @@ html[data-letra="grande"] body{zoom:1.12}
 #menu .mnav button{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--fg);font:600 16px var(--body);text-align:left;cursor:pointer}
 #menu .mnav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
 #menu .mnav button i{font-style:normal;width:24px;text-align:center}
-#menu .mnav .sub{font-weight:500;font-size:15px;padding-left:48px;min-height:44px;color:var(--muted)}
+#menu .mnav .sub{font-weight:500;font-size:15px;padding-left:28px;min-height:44px;color:var(--muted)}
 #menu .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--surface-2);border-radius:10px;padding:4px}
 #menu .seg button{min-height:40px;border:0;border-radius:8px;background:none;color:var(--fg);font:600 14px var(--body)}
 #menu .seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15);color:var(--accent)}
@@ -587,7 +587,7 @@ function menuHtml(){
   const seg=(k,ops)=>`<div class="seg" role="group">${ops.map(([v,t])=>`<button data-cfg="${k}" data-v="${v}" aria-pressed="${CFG[k]===v}">${t}</button>`).join("")}</div>`;
   const cores=[["azul","#2346c4"],["verde","#15803d"],["laranja","#c2410c"],["roxo","#6d28d9"]];
   return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
-  <section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}><i aria-hidden="true">${i}</i>${n}</button>`).join("")}
+  <section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${n}</button>`).join("")}
     ${MENU_SUB.map(([t,n],j)=>`<button class="sub" data-sub="${j}">${n}</button>`).join("")}</div></section>
   <section><h3>Tema</h3>${seg("tema",[["auto","Automático"],["light","Claro"],["dark","Escuro"]])}</section>
   <section><h3>Cor de destaque</h3><div class="cores">${cores.map(([v,c])=>`<button data-cfg="cor" data-v="${v}" aria-pressed="${CFG.cor===v}" aria-label="${cap(v)}" style="background:${c}"></button>`).join("")}</div></section>
