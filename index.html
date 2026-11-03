@@ -344,6 +344,7 @@ body.menuaberto{overflow:hidden}
 .cfgsec label.mrow input.sw:checked{background:var(--accent)}.cfgsec label.mrow input.sw:checked::after{left:23px}
 .cfgsec label.mrow select{width:auto;flex:none}
 .cfgsec h3{margin:0}
+.auto-list{margin:10px 0}.auto-list .ai{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line,rgba(127,127,127,.2))}.auto-list .ai>div{min-width:0}.auto-list .ai small{display:block}.auto-list .ai>span{white-space:nowrap;font-weight:600}
 </style>
 
 <header class="top">
@@ -534,7 +535,37 @@ function metas(p){
 }
 function pesoAtual(){let best=null;Object.keys(S.days).forEach(d=>{if(S.days[d].peso&&(!best||d>best[0]))best=[d,S.days[d].peso]});
   Object.values(S.fisico||{}).forEach(f=>{if(f&&f.peso&&f.data&&(!best||f.data>best[0]))best=[f.data,f.peso]});return best?best[1]:S.profile.peso}
-function profileVivo(){return {...S.profile,peso:pesoAtual()}}
+function profileVivo(){return {...S.profile,peso:pesoAtual(),idade:idadeAtual(),atividade:atividadeAuto().v}}
+// Idade pela data de nascimento (se informada)
+function idadeAtual(){const n=S.profile.nasc;if(!n||!/^\d{4}-\d{2}-\d{2}$/.test(n))return S.profile.idade;const h=hojeISO();let a=+h.slice(0,4)-+n.slice(0,4);if(h.slice(5)<n.slice(5))a--;return a>0?a:S.profile.idade}
+// Pesos registrados (dia a dia e status do mês), do mais antigo ao mais recente
+function pesosRegistrados(){const r=[];Object.keys(S.days).forEach(d=>{if(S.days[d].peso)r.push([d,+S.days[d].peso])});
+  Object.values(S.fisico||{}).forEach(f=>{if(f&&f.peso&&f.data)r.push([f.data,+f.peso])});return r.sort((a,b)=>a[0]<b[0]?-1:1)}
+// Atividade pelos treinos das últimas 4 semanas (ou desde o primeiro treino, se for mais recente)
+let atvCache={t:0,v:null};
+function atividadeAuto(){if(Date.now()-atvCache.t<1500&&atvCache.v)return atvCache.v;
+  const h=hojeISO(),ini=addDias(h,-28);let primeiro=null,n=0;
+  for(let d=ini;d<h;d=addDias(d,1)){if(registrosDia(d).length||S.days[d]?.treino){n++;if(!primeiro)primeiro=d}}
+  let r;if(!n)r={v:+S.profile.atividade||1.55,auto:false};
+  else{const desde=Object.keys(S.days).sort().find(d=>registrosDia(d).length||S.days[d].treino)||primeiro,dias=Math.max(7,Math.min(28,(new Date(h+"T12:00:00")-new Date((desde>ini?desde:ini)+"T12:00:00"))/864e5)),
+    porSem=n/(dias/7);r={v:porSem>=5.5?1.725:porSem>=3.5?1.55:1.375,porSem,auto:true}}
+  atvCache={t:Date.now(),v:r};return r}
+const ATV_NOME={1.375:"Leve",1.55:"Moderada",1.725:"Alta"};
+// Sugestão de superávit pela evolução do peso (só sugere; aplicar é com você)
+function sugestaoSuperavit(){const ps=pesosRegistrados();if(ps.length<2)return null;const h=hojeISO(),[d1,w1]=ps.at(-1);
+  if(d1<addDias(h,-10))return null;const base=ps.filter(([d])=>d<=addDias(d1,-14)).at(-1);if(!base)return null;
+  const [d0,w0]=base,dias=(new Date(d1+"T12:00:00")-new Date(d0+"T12:00:00"))/864e5,sem=dias/7,taxa=(w1-w0)/sem,sup=+S.profile.superavit||0,dif=r1(w1-w0);
+  const txt=`${dif>0?"+":""}${String(dif).replace(".",",")} kg em ${Math.round(dias)} dias`;
+  if(taxa<0.1)return {novo:sup+150,motivo:`Peso parado (${txt}). Para ganhar massa, suba o superávit.`};
+  if(taxa>0.5)return {novo:Math.max(0,sup-150),motivo:`Peso subindo rápido (${txt}). Para ganhar menos gordura, reduza o superávit.`};
+  return null}
+function cardSugestao(naHoje){const sg=sugestaoSuperavit();if(!sg)return "";
+  let ate="";try{ate=localStorage.getItem(LS+"-supAdiar")||""}catch(e){}if(ate&&hojeISO()<ate)return "";
+  return `<section class="card"><h3>Ajuste de calorias sugerido</h3><p style="margin:4px 0 10px">${esc(sg.motivo)} Superávit: ${esc(S.profile.superavit)} → <b>${sg.novo} kcal</b>.</p>
+    <div class="row" style="gap:8px"><button class="btn" id="supAplicar">Aplicar</button><button class="ghost" id="supAdiar">Agora não</button></div></section>`}
+function bindSugestao(){const adia=()=>{try{localStorage.setItem(LS+"-supAdiar",addDias(hojeISO(),14))}catch(e){}};
+  if(window.supAplicar)supAplicar.onclick=()=>{const sg=sugestaoSuperavit();if(!sg)return;S.profile.superavit=sg.novo;saveProfile();adia();toast("Superávit agora é "+sg.novo+" kcal");render()};
+  if(window.supAdiar)supAdiar.onclick=()=>{adia();render()}}
 
 // ---------- Persistência (db da página; cai para o navegador se indisponível) ----------
 const LS="caderno-treino-v1";
@@ -813,7 +844,7 @@ function vHoje(){
 
   regCache={};const avRes=ehHoje?avisoResumo():"";
   const ptsHoje=(()=>{const p=pontosMes(hojeISO().slice(0,7));return `<button class="pill pt" id="verPts" aria-label="Pontos do mês: ${p.total} de ${p.meta}"><b>${p.total}</b>/${p.meta} pontos</button>`})();regCache=null;
-  app.innerHTML=`${avRes}${ehHoje?avisoFisico():""}
+  app.innerHTML=`${avRes}${ehHoje?avisoFisico()+cardSugestao(true):""}
   <section class="card">
     <div class="row between" style="align-items:flex-start">
       <div><div class="eyebrow">${DIAS_LONGO[w]} · ${fmtData(iso)}${ehHoje?"":" · outro dia"}</div>
@@ -871,7 +902,7 @@ function vHoje(){
     </div>
   </details>`;
 
-  bindAvisoResumo();bindAvisoFisico();
+  bindAvisoResumo();bindAvisoFisico();bindSugestao();
   verPts.onclick=()=>{S.calMes=null;S.calDia=null;S.tab="progresso";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="progresso"));render();document.getElementById("cardCal")?.scrollIntoView({block:"start"})};
   secTreino.ontoggle=()=>{S.open.treino=secTreino.open};secAlim.ontoggle=()=>{S.open.alim=secAlim.open};
   secTreino.oninput=e=>{const t=e.target;if(/^(kg-|rp-|obs)/.test(t.id)){(S.draft[dk]||(S.draft[dk]={...dr}))[t.id]=t.value;salvarRascunho(iso,sk,dk);if(!WK.start&&ehHoje&&!salvo)wkStart();
@@ -1396,37 +1427,47 @@ function chart(pts,unit){
 }
 
 function vPerfil(root=app){
-  const p=S.profile,M=metas(profileVivo());
-  root.innerHTML=`
+  const p=S.profile,pv=profileVivo(),M=metas(pv),atv=atividadeAuto(),ps=pesosRegistrados(),ult=ps.at(-1),idade=idadeAtual();
+  root.innerHTML=`${cardSugestao(false)}
   <section class="card"><h2>Seus dados</h2>
     <div class="grid2">
       <label>Sexo (para a fórmula)<select id="pSexo"><option value="m" ${p.sexo==="m"?"selected":""}>Masculino</option><option value="f" ${p.sexo==="f"?"selected":""}>Feminino</option></select></label>
-      <label>Idade<input id="pIdade" type="number" value="${esc(p.idade)}"></label>
-      <label>Altura (cm)<input id="pAlt" type="number" value="${esc(p.altura)}"></label>
-      <label>Peso inicial (kg)<input id="pPeso" type="number" step="0.1" value="${esc(p.peso)}"></label>
-      <label>Atividade<select id="pAtv">${[[1.375,"Leve (1 a 3 treinos/semana)"],[1.55,"Moderada (4 a 5 treinos/semana)"],[1.725,"Alta (6+ treinos/semana ou trabalho físico)"]].map(([v,t])=>`<option value="${v}" ${+p.atividade===v?"selected":""}>${t}</option>`).join("")}</select></label>
-      <label>Superávit (kcal)<input id="pSup" type="number" step="50" value="${esc(p.superavit)}"></label>
-      <label>Proteína (g por kg)<input id="pProt" type="number" step="0.1" value="${esc(p.protkg)}"></label>
-      <label>Gordura (g por kg)<input id="pGord" type="number" step="0.1" value="${esc(p.gordkg)}"></label>
+      <label>Data de nascimento<input id="pNasc" type="date" value="${esc(p.nasc||"")}"></label>
+      <label>Altura (cm)<input id="pAlt" inputmode="decimal" value="${esc(p.altura)}"></label>
+      <label>Superávit (kcal)<input id="pSup" inputmode="numeric" value="${esc(p.superavit)}"></label>
+      ${ult?"":`<label>Peso (kg)<input id="pPeso" inputmode="decimal" value="${esc(p.peso)}"></label>`}
     </div>
-    <div><button class="btn" id="salvarP">Salvar perfil</button></div>
+    <div class="auto-list">
+      <div class="ai"><div><b>Idade</b><small class="muted">${p.nasc?"pela data de nascimento":"informe a data de nascimento"}</small></div><span>${esc(idade)} anos</span></div>
+      ${ult?`<div class="ai"><div><b>Peso atual</b><small class="muted">último registro, ${fmtData(ult[0])}</small></div><span>${String(ult[1]).replace(".",",")} kg</span></div>`:""}
+      <div class="ai"><div><b>Atividade</b><small class="muted">${atv.auto?`média de ${String(r1(atv.porSem)).replace(".",",")} treinos/semana`:"sem treinos nas últimas 4 semanas"}</small></div><span>${ATV_NOME[atv.v]||atv.v}</span></div>
+    </div>
+    <details class="more"><summary>Avançado</summary><div class="grid2">
+      <label>Proteína (g por kg)<input id="pProt" inputmode="decimal" value="${esc(p.protkg)}"></label>
+      <label>Gordura (g por kg)<input id="pGord" inputmode="decimal" value="${esc(p.gordkg)}"></label>
+      <label>Atividade sem treinos registrados<select id="pAtv">${[[1.375,"Leve"],[1.55,"Moderada"],[1.725,"Alta"]].map(([v,t])=>`<option value="${v}" ${+p.atividade===v?"selected":""}>${t}</option>`).join("")}</select></label>
+      ${ult?`<label>Peso inicial (kg)<input id="pPeso" inputmode="decimal" value="${esc(p.peso)}"></label>`:""}
+    </div></details>
+    <div><button class="btn" id="salvarP">Salvar</button></div>
   </section>
   <section class="card"><h2>Como a meta foi calculada</h2>
     <div class="tablewrap"><table>
       <tr><td>Metabolismo basal (Mifflin-St Jeor)</td><td class="r">${r0(M.tmb)} kcal</td></tr>
-      <tr><td>Gasto diário (× ${esc(p.atividade)})</td><td class="r">${r0(M.get)} kcal</td></tr>
+      <tr><td>Gasto diário (× ${esc(pv.atividade)}, ${ATV_NOME[pv.atividade]||""})</td><td class="r">${r0(M.get)} kcal</td></tr>
       <tr><td>Superávit para ganhar massa</td><td class="r">+${esc(p.superavit)} kcal</td></tr>
       <tr><td><b>Meta diária</b></td><td class="r"><b>${r0(M.kcal)} kcal</b></td></tr>
-      <tr><td>Proteína (${esc(p.protkg)} g × ${esc(pesoAtual())} kg)</td><td class="r">${r0(M.prot)} g</td></tr>
-      <tr><td>Gordura (${esc(p.gordkg)} g × ${esc(pesoAtual())} kg)</td><td class="r">${r0(M.gord)} g</td></tr>
+      <tr><td>Proteína (${esc(p.protkg)} g × ${esc(pv.peso)} kg)</td><td class="r">${r0(M.prot)} g</td></tr>
+      <tr><td>Gordura (${esc(p.gordkg)} g × ${esc(pv.peso)} kg)</td><td class="r">${r0(M.gord)} g</td></tr>
       <tr><td>Carboidrato (o resto)</td><td class="r">${r0(M.carb)} g</td></tr>
     </table></div>
-    <p class="note">Se o peso não subir em 2 semanas, aumente o superávit em 150 a 200 kcal. Se subir mais de 0,5 kg por semana, reduza.</p>
-  </section>
-  <p class="small muted">Os dados ficam salvos na sua conta Claude e só você vê. Fora do Claude, ficam salvos neste navegador.</p>`;
-  salvarP.onclick=()=>{const n=(id,k)=>{const v=parseFloat(String(document.getElementById(id).value).replace(",","."));return isFinite(v)&&(v>0||k==="superavit")?v:p[k]};
-    Object.assign(S.profile,{sexo:pSexo.value,idade:n("pIdade","idade"),altura:n("pAlt","altura"),peso:n("pPeso","peso"),atividade:n("pAtv","atividade"),superavit:n("pSup","superavit"),protkg:n("pProt","protkg"),gordkg:n("pGord","gordkg")});
-    saveProfile();toast("Perfil salvo");render();};
+    <p class="small muted">Idade, peso e atividade se atualizam sozinhos. O superávit só muda quando você aceita a sugestão.</p>
+  </section>`;
+  salvarP.onclick=()=>{const n=(id,k)=>{const el=document.getElementById(id);if(!el)return p[k];const v=parseFloat(String(el.value).replace(",","."));return isFinite(v)&&(v>0||k==="superavit")?v:p[k]};
+    const nasc=pNasc.value&&/^\d{4}-\d{2}-\d{2}$/.test(pNasc.value)&&pNasc.value<hojeISO()?pNasc.value:p.nasc;
+    Object.assign(S.profile,{sexo:pSexo.value,altura:n("pAlt","altura"),peso:n("pPeso","peso"),atividade:n("pAtv","atividade"),superavit:n("pSup","superavit"),protkg:n("pProt","protkg"),gordkg:n("pGord","gordkg")});
+    if(nasc)S.profile.nasc=nasc;S.profile.idade=idadeAtual();atvCache.t=0;
+    saveProfile();toast("Dados salvos");render();};
+  bindSugestao();
 }
 
 init();
