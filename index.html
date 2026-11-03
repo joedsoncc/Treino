@@ -275,10 +275,51 @@ details.how summary{min-height:44px}
 .pts li{display:flex;justify-content:space-between}.neg{color:var(--danger);font-weight:700}
 button.pill{font-family:var(--body);font-size:13px;cursor:pointer}
 .pill.pt{border-color:var(--cal-ok-line);background:var(--cal-ok);color:var(--cal-ok-fg)}
+/* Cores de destaque e letra grande (Configurações) */
+:root[data-cor="verde"]{--accent:#15803d;--accent-soft:#dcfce7}
+@media (prefers-color-scheme: dark){:root[data-cor="verde"]:not([data-theme="light"]){--accent:#4ade80;--accent-soft:#14391f}}
+:root[data-theme="dark"][data-cor="verde"]{--accent:#4ade80;--accent-soft:#14391f}
+:root[data-cor="laranja"]{--accent:#c2410c;--accent-soft:#fde7d9}
+@media (prefers-color-scheme: dark){:root[data-cor="laranja"]:not([data-theme="light"]){--accent:#fb923c;--accent-soft:#3a2214}}
+:root[data-theme="dark"][data-cor="laranja"]{--accent:#fb923c;--accent-soft:#3a2214}
+:root[data-cor="roxo"]{--accent:#6d28d9;--accent-soft:#ede9fe}
+@media (prefers-color-scheme: dark){:root[data-cor="roxo"]:not([data-theme="light"]){--accent:#c4b5fd;--accent-soft:#2a1f4a}}
+:root[data-theme="dark"][data-cor="roxo"]{--accent:#c4b5fd;--accent-soft:#2a1f4a}
+html[data-letra="grande"] body{zoom:1.12}
+/* Menu ☰ */
+.menub{flex:none;width:44px;height:44px;margin-left:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--fg);align-self:center}
+.menub span,.menub span::before,.menub span::after{display:block;width:20px;height:2px;border-radius:2px;background:currentColor;position:relative}
+.menub span::before,.menub span::after{content:"";position:absolute;left:0}.menub span::before{top:-6px}.menub span::after{top:6px}
+.brand .sync{margin-left:auto}
+#menu{position:fixed;inset:0;z-index:40}
+#menu .scrim{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+#menu aside{position:absolute;top:0;right:0;bottom:0;width:min(340px,88vw);background:var(--bg);border-left:1px solid var(--line);overflow-y:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 24px;display:grid;gap:16px;align-content:start;box-shadow:-8px 0 24px rgba(0,0,0,.2)}
+#menu .mh{display:flex;align-items:center;justify-content:space-between}
+#menu .mh h2{margin:0}
+#menu .mclose{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:22px;color:var(--fg)}
+#menu h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#menu .mnav{display:grid;gap:4px}
+#menu .mnav button{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--fg);font:600 16px var(--body);text-align:left;cursor:pointer}
+#menu .mnav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+#menu .mnav button i{font-style:normal;width:24px;text-align:center}
+#menu .mnav .sub{font-weight:500;font-size:15px;padding-left:48px;min-height:44px;color:var(--muted)}
+#menu .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--surface-2);border-radius:10px;padding:4px}
+#menu .seg button{min-height:40px;border:0;border-radius:8px;background:none;color:var(--fg);font:600 14px var(--body)}
+#menu .seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15);color:var(--accent)}
+#menu .cores{display:flex;gap:10px}
+#menu .cores button{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);cursor:pointer}
+#menu .cores button[aria-pressed="true"]{outline:3px solid var(--fg);outline-offset:2px}
+#menu .mrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px}
+#menu .mrow select{max-width:150px}
+#menu .sw{appearance:none;width:48px;height:28px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;flex:none;border:0;margin:0}
+#menu .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+#menu .sw:checked{background:var(--accent)}#menu .sw:checked::after{left:23px}
+#menu .mfoot{font-size:13px;color:var(--muted)}
+body.menuaberto{overflow:hidden}
 </style>
 
 <header class="top">
-  <div class="brand"><h1>Caderno de <span>Treino</span></h1><span class="sync" id="sync">Carregando…</span></div>
+  <div class="brand"><h1>Caderno de <span>Treino</span></h1><span class="sync" id="sync">Carregando…</span><button class="menub" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span></button></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="hoje" aria-selected="true">Hoje</button>
     <button role="tab" data-tab="semana" aria-selected="false">Semana</button>
@@ -288,6 +329,7 @@ button.pill{font-family:var(--body);font-size:13px;cursor:pointer}
 </header>
 
 <main class="wrap" id="app"></main>
+<div id="menu" hidden><div class="scrim" id="menuScrim"></div><aside role="dialog" aria-modal="true" aria-label="Menu" id="menuBox"></aside></div>
 <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 <div class="danger" id="danger" hidden role="alertdialog" aria-modal="true" aria-labelledby="dgT"><div class="dbox">
   <div class="dico" aria-hidden="true">!</div><p class="dstep" id="dgS">Etapa 1 de 2</p>
@@ -302,6 +344,15 @@ button.pill{font-family:var(--body);font-size:13px;cursor:pointer}
 
 <script>
 const PWA=true; // true na versão instalável (site próprio)
+// Configurações do menu ☰ (ficam neste aparelho)
+const CFG_PADRAO={tema:"auto",cor:"azul",letra:"normal",som:true,vibrar:true,descanso:0};
+let CFG={...CFG_PADRAO};try{CFG={...CFG_PADRAO,...JSON.parse(localStorage.getItem("caderno-treino-v1-cfg")||"{}")}}catch(e){}
+function aplicaCfg(){const h=document.documentElement;
+  if(CFG.tema==="auto")delete h.dataset.theme;else h.dataset.theme=CFG.tema;
+  if(CFG.cor==="azul")delete h.dataset.cor;else h.dataset.cor=CFG.cor;
+  if(CFG.letra==="grande")h.dataset.letra="grande";else delete h.dataset.letra;}
+function salvaCfg(){try{localStorage.setItem("caderno-treino-v1-cfg",JSON.stringify(CFG))}catch(e){}aplicaCfg()}
+aplicaCfg();
 // ---------- Plano de treino ----------
 const PLAN = {
   push:{nome:"Push", foco:"Peito, ombro e tríceps", dia:1, ex:[
@@ -526,6 +577,42 @@ async function init(){
 function setSync(t){document.getElementById("sync").textContent=t}
 let tt;function toast(t){const el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2200)}
 
+// ---------- Menu ☰: navegação e configurações ----------
+function irPara(tab,depois){S.tab=tab;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===tab));render();window.scrollTo(0,0);if(depois)depois()}
+const MENU_NAV=[["hoje","🏋️","Hoje"],["semana","📅","Semana e cardápio"],["progresso","📈","Progresso"],["mais","⋯","Mais"]];
+const MENU_SUB=[["progresso","Calendário e pontos",()=>document.getElementById("cardCal")?.scrollIntoView({block:"start"})],
+  ["semana","Cardápio do trabalho",()=>document.getElementById("wMenu")?.scrollIntoView({block:"start"})],
+  ["mais","Suplementos","supl"],["mais","Meus dados e metas","perf"],["mais","Lembretes","lem"],["mais","Backup","bkp"]];
+function menuHtml(){
+  const seg=(k,ops)=>`<div class="seg" role="group">${ops.map(([v,t])=>`<button data-cfg="${k}" data-v="${v}" aria-pressed="${CFG[k]===v}">${t}</button>`).join("")}</div>`;
+  const cores=[["azul","#2346c4"],["verde","#15803d"],["laranja","#c2410c"],["roxo","#6d28d9"]];
+  return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
+  <section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}><i aria-hidden="true">${i}</i>${n}</button>`).join("")}
+    ${MENU_SUB.map(([t,n],j)=>`<button class="sub" data-sub="${j}">${n}</button>`).join("")}</div></section>
+  <section><h3>Tema</h3>${seg("tema",[["auto","Automático"],["light","Claro"],["dark","Escuro"]])}</section>
+  <section><h3>Cor de destaque</h3><div class="cores">${cores.map(([v,c])=>`<button data-cfg="cor" data-v="${v}" aria-pressed="${CFG.cor===v}" aria-label="${cap(v)}" style="background:${c}"></button>`).join("")}</div></section>
+  <section><h3>Tamanho da letra</h3>${seg("letra",[["normal","Normal"],["grande","Grande"]])}</section>
+  <section><h3>Descanso</h3>
+    <label class="mrow"><span>Som no fim do descanso</span><input type="checkbox" class="sw" data-tg="som" ${CFG.som?"checked":""}></label>
+    <label class="mrow"><span>Vibrar no fim do descanso</span><input type="checkbox" class="sw" data-tg="vibrar" ${CFG.vibrar?"checked":""}></label>
+    <label class="mrow"><span>Tempo padrão</span><select id="cfgDesc">${[[0,"Pelo exercício"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[180,"3:00"]].map(([v,t])=>`<option value="${v}" ${+CFG.descanso===v?"selected":""}>${t}</option>`).join("")}</select></label>
+    <p class="small muted" style="margin:0">"Pelo exercício": 2:00 para até 8 repetições e 1:30 para mais.</p></section>
+  <p class="mfoot">${esc(document.getElementById("sync").textContent)} · As configurações ficam neste aparelho.</p>`;
+}
+function menuAbre(){menuBox.innerHTML=menuHtml();menu.hidden=false;document.body.classList.add("menuaberto");menuBtn.setAttribute("aria-expanded","true");
+  const fecha=()=>menuFecha_();menuFecha.onclick=fecha;
+  menuBox.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>{fecha();irPara(b.dataset.ir)});
+  menuBox.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{const [t,,x]=MENU_SUB[+b.dataset.sub];fecha();
+    if(typeof x==="string"){S.open[x]=true;irPara(t,()=>{const d={supl:"dSupl",perf:"dPerf",lem:"dLem",bkp:"dBkp"}[x];document.getElementById(d)?.scrollIntoView({block:"start"})})}else irPara(t,x)});
+  menuBox.querySelectorAll("[data-cfg]").forEach(b=>b.onclick=()=>{CFG[b.dataset.cfg]=b.dataset.v;salvaCfg();menuAbre()});
+  menuBox.querySelectorAll("[data-tg]").forEach(c=>c.onchange=()=>{CFG[c.dataset.tg]=c.checked;salvaCfg()});
+  cfgDesc.onchange=()=>{CFG.descanso=+cfgDesc.value;salvaCfg();if(S.tab==="hoje")render();toast("Descanso padrão salvo")};
+  (menuBox.querySelector('[aria-current="page"]')||menuFecha).focus();
+}
+function menuFecha_(){menu.hidden=true;document.body.classList.remove("menuaberto");menuBtn.setAttribute("aria-expanded","false");menuBtn.focus()}
+menuBtn.onclick=menuAbre;menuScrim.onclick=menuFecha_;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menu.hidden)menuFecha_()});
+
 // ---------- Render ----------
 const app=document.getElementById("app");
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));render();window.scrollTo(0,0)});
@@ -575,7 +662,7 @@ function planoRefeicoes(iso){
 }
 
 // ---------- Timer de descanso ----------
-function descansoPadrao(reps){const n=parseInt(String(reps).split("x")[1]);return isNaN(n)?60:n<=8?120:90}
+function descansoPadrao(reps){if(+CFG.descanso>0)return +CFG.descanso;const n=parseInt(String(reps).split("x")[1]);return isNaN(n)?60:n<=8?120:90}
 function fmtT(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 // Sessão de treino: fica ativa até "Finalizar" ou salvar o treino. Guardada no navegador para sobreviver a sair e voltar.
 const WKKEY="caderno-treino-v1-wk";
@@ -583,8 +670,8 @@ let WK={};try{WK=JSON.parse(localStorage.getItem(WKKEY)||"{}")||{}}catch(e){WK={
 if(WK.start&&Date.now()-WK.start>5*3600e3)WK={};
 function wkSave(){try{localStorage.setItem(WKKEY,JSON.stringify(WK))}catch(e){}}
 const TM={ac:null,beeped:false};
-function beep(){try{const ac=TM.ac;if(!ac)return;[0,0.35,0.7].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=t>0.6?1320:880;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(0.0001,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(0.4,ac.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+t+0.28);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+0.3)})}catch(e){}
-  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,500])}catch(e){}}
+function beep(){try{const ac=TM.ac;if(!ac||!CFG.som)return;[0,0.35,0.7].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=t>0.6?1320:880;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(0.0001,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(0.4,ac.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+t+0.28);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+0.3)})}catch(e){}
+  try{CFG.vibrar&&navigator.vibrate&&navigator.vibrate([300,150,300,150,500])}catch(e){}}
 function fmtLong(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")}
 let wakeLock=null;
 async function keepAwake(){try{if(navigator.wakeLock&&!wakeLock&&document.visibilityState==="visible"){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}}catch(e){}}
@@ -648,8 +735,8 @@ async function notif(fim){
     const fimTxt=WK.restEnd?new Date(WK.restEnd).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
     const titulo=fim?"Próxima série! 💪":resting?"⏱ Descanso até "+fimTxt:"🏋️ Em treino · "+nome;
     const linhas=[(resting||fim?nome+" · ":"")+"Treino: "+dur+" (desde "+hhmm(WK.start)+")",prog,"Toque para abrir o app"].filter(Boolean);
-    await SWR.showNotification(titulo,{tag:"treino",renotify:!!fim,silent:!fim,requireInteraction:true,body:linhas.join("\n"),
-      icon:"icon-192.png",badge:"badge.png",timestamp:resting?WK.restEnd:WK.start,vibrate:fim?[300,150,300,150,500]:undefined,data:{url:"./"}});
+    await SWR.showNotification(titulo,{tag:"treino",renotify:!!fim,silent:!fim||(!CFG.som&&!CFG.vibrar),requireInteraction:true,body:linhas.join("\n"),
+      icon:"icon-192.png",badge:"badge.png",timestamp:resting?WK.restEnd:WK.start,vibrate:fim&&CFG.vibrar?[300,150,300,150,500]:undefined,data:{url:"./"}});
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")notif()});
