@@ -604,8 +604,8 @@ function setSync(t){document.getElementById("sync").textContent=t}
 let tt;function toast(t){const el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2200)}
 
 // ---------- Menu ☰: cada tela é uma opção, separadas por categoria ----------
-const TELAS={hoje:"Hoje",semana:"Plano de treino",progresso:"Calendário e cargas",corpo:"Evolução física",cardapio:"Cardápio do trabalho",supl:"Suplementos",lembretes:"Lembretes",backup:"Backup",ajustes:"Ajustes"};
-const MENU_CAT=[["Treino",["hoje","semana"]],["Progresso",["progresso","corpo"]],["Alimentação",["cardapio","supl"]],["App",["lembretes","backup","ajustes"]]];
+const TELAS={hoje:"Hoje",semana:"Plano de treino",progresso:"Calendário e cargas",corpo:"Evolução física",supl:"Suplementos",lembretes:"Lembretes",backup:"Backup",ajustes:"Ajustes"};
+const MENU_CAT=[["Treino",["hoje","semana"]],["Progresso",["progresso","corpo"]],["Alimentação",["supl"]],["App",["lembretes","backup","ajustes"]]];
 function irPara(tab,depois){S.tab=tab;render();window.scrollTo(0,0);if(depois)depois()}
 function menuHtml(){
   return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
@@ -644,7 +644,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menu.hidden)menuFe
 // ---------- Render ----------
 const app=document.getElementById("app");
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));render();window.scrollTo(0,0)});
-const VIEWS={hoje:()=>vHoje(),semana:()=>vPlano(app),progresso:()=>vProgresso(),corpo:()=>vCorpo(),cardapio:()=>vCardapio(app),supl:()=>vSupl(app),lembretes:()=>vLembretes(app),backup:()=>vBackup(),ajustes:()=>vAjustes()};
+const VIEWS={hoje:()=>vHoje(),semana:()=>vPlano(app),progresso:()=>vProgresso(),corpo:()=>vCorpo(),supl:()=>vSupl(app),lembretes:()=>vLembretes(app),backup:()=>vBackup(),ajustes:()=>vAjustes()};
 try{const t=localStorage.getItem(LS+"-tab");if(t&&VIEWS[t]){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t))}}catch(e){}
 
 function render(fromSnap){
@@ -1067,7 +1067,7 @@ async function acaoInicial(){
   const vai=t=>{S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t))};
   if(a==="treino"){vai("hoje");S.date=hojeISO();S.open.treino=true;render();wkStart();document.getElementById("secTreino")?.scrollIntoView({block:"start"})}
   else if(a==="refeicao"){vai("hoje");S.date=hojeISO();S.open.alim=true;render();const el=document.getElementById("secAlim");el?.scrollIntoView({block:"start"})}
-  else if(a==="cardapio"){vai("cardapio");render();
+  else if(a==="cardapio"&&false){
     try{const c=await caches.open("treino-estado"),r=await c.match("./__compartilhado");if(!r){toast("Não recebi a foto. Tente compartilhar de novo.");return}
       const b=await r.blob();await c.delete("./__compartilhado");await salvarFotoCardapio(new File([b],"cardapio",{type:b.type||"image/jpeg"}));
       document.getElementById("wMenu")?.scrollIntoView({block:"start"})}catch(e){toast("Não consegui abrir a foto.")}}
