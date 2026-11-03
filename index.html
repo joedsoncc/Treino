@@ -681,7 +681,7 @@ function ultimaVez(nome,antesDe){
 const DIAS_LONGO=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 // Plano alimentar diário (~2.660 kcal). Treino de manhã, jantar no trabalho em dias úteis.
 function planoRefeicoes(iso){
-  const w=wd(iso),util=w>=1&&w<=5,jt=S.menu?.escolhas?.[w];
+  const w=wd(iso),util=w>=1&&w<=5,jt=menuAtual()&&semanaRef(iso)===semanaRef(hojeISO())?S.menu?.escolhas?.[w]:"";
   return [
     {id:"cafe",hora:"7h",nome:"Café da manhã (pré-treino)",desc:"3 ovos + 1 pão francês + 1 banana + 200 ml de leite",kcal:557,p:30,c:58,g:23},
     {id:"almoco",hora:"12h",nome:"Almoço (pós-treino)",desc:"250 g de arroz + 150 g de feijão + 150 g de frango + salada + 1 colher de azeite",kcal:760,p:62,c:90,g:15},
@@ -1252,7 +1252,7 @@ function cardStreak(){
     <p class="small muted">${st?"Não quebre a sequência: fim de semana não conta como falta.":"Salve o treino de hoje para começar a sequência."}</p>
   </section>`;
 }
-function jantarHoje(iso){const w=wd(iso),e=S.menu?.escolhas?.[w];if(!e)return "";
+function jantarHoje(iso){const w=wd(iso),e=menuAtual()?S.menu?.escolhas?.[w]:"";if(!e)return "";
   return `<section class="card"><div class="jantar"><h3>Jantar no trabalho</h3><span>${esc(e)}</span></div></section>`}
 
 // ---------- Cardápio ----------
@@ -1262,32 +1262,38 @@ function vCardapio(root=app){
   root.innerHTML=`
   <section class="card">
     <div class="row between"><h2>Cardápio da semana</h2><span class="chip">${esc(m.semana||"")}</span></div>
+    ${menuAtual()?"":`<p class="note">Este cardápio é de uma semana anterior. Envie a foto do cardápio de ${rotuloSemana(semanaRef(hojeISO()))} para atualizar.</p>`}
     ${src?(m.isPdf?`<a href="${esc(src)}" target="_blank" rel="noopener">Abrir cardápio (PDF)</a>`:`<a href="${esc(src)}" target="_blank" rel="noopener"><img class="menuimg" src="${esc(src)}" alt="Cardápio do trabalho"></a><span class="small muted">Toque na imagem para ampliar.</span>`):`<p class="empty">Nenhum cardápio enviado. Envie a foto do cardápio da semana para consultar aqui.</p>`}
     <div class="row">
-      <label>Semana<input id="mSem" value="${esc(m.semana||"")}" placeholder="Ex.: 05/10 a 09/10"></label>
+      <label>Semana<input id="mSem" value="${esc(menuAtual()?m.semana||"":rotuloSemana(semanaRef(hojeISO())))}" placeholder="Ex.: 05/10 a 09/10"></label>
       ${podeEnviar?`<label>Foto do cardápio<input id="mFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf"></label>`:`<span class="small muted">Só quem edita o app pode enviar foto.</span>`}
     </div>
   </section>
   <section class="card">
     <h2>Minha escolha do jantar</h2>
     <p class="note">Escolha a carne no Viva Leve ou no Sabor de Casa (o Grill é pago). Prato: 150 g de carne + 5 a 6 colheres de arroz + 1 concha de feijão + legumes. Porção pequena? Some um ovo ou omelete.</p>
-    <div class="picks">${[1,2,3,4,5].map(i=>`<label><b>${DIAS[i]}</b><input id="pk${i}" value="${esc(m.escolhas?.[i]||"")}" placeholder="Ex.: Frango grelhado + arroz + feijão"></label>`).join("")}</div>
+    <div class="picks">${[1,2,3,4,5].map(i=>`<label><b>${DIAS[i]}</b><input id="pk${i}" value="${esc(menuAtual()?m.escolhas?.[i]||"":"")}" placeholder="${esc(!menuAtual()&&m.escolhas?.[i]?"Semana passada: "+m.escolhas[i]:"Ex.: Frango grelhado + arroz + feijão")}"></label>`).join("")}</div>
     <div class="row"><button class="btn" id="salvarMenu">Salvar semana</button><span class="small muted">A escolha do dia aparece na aba Hoje.</span></div>
   </section>`;
-  salvarMenu.onclick=()=>{const m=S.menu;m.semana=mSem.value.trim();m.ini=hojeISO()>(m.ini||"")?hojeISO():m.ini;m.escolhas={};[1,2,3,4,5].forEach(i=>m.escolhas[i]=document.getElementById("pk"+i).value.trim());saveMenu();toast("Semana salva")};
+  salvarMenu.onclick=()=>{const m=S.menu;m.semana=mSem.value.trim();m.ini=semanaRef(hojeISO());m.escolhas={};[1,2,3,4,5].forEach(i=>m.escolhas[i]=document.getElementById("pk"+i).value.trim());saveMenu();toast("Semana salva")};
   if(window.mFile)mFile.onchange=e=>{const f=e.target.files[0];if(f)salvarFotoCardapio(f,mSem.value.trim())};
 }
 // reduz a foto (máx. 1600 px, JPEG) para caber no navegador
 function fotoReduzida(f){return new Promise(res=>{if(!/^image\//.test(f.type)){const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res(null);fr.readAsDataURL(f);return}
   const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",0.72))};im.onerror=()=>{URL.revokeObjectURL(u);res(null)};im.src=u})}
+function semanaRef(iso){const w=wd(iso);return addDias(iso,w===0?1:w===6?2:1-w)}
+function rotuloSemana(seg){return fmtData(seg)+" a "+fmtData(addDias(seg,4))}
+function menuAtual(){return !!S.menu?.ini&&semanaRef(S.menu.ini)===semanaRef(hojeISO())}
+// cardápio de outra semana: começa a semana nova sem as escolhas antigas
+function novaSemanaMenu(m,semana){const seg=semanaRef(hojeISO());if(!menuAtual()){m.escolhas={};m.semana=semana&&semana!==m.semana?semana:rotuloSemana(seg)}else if(semana)m.semana=semana;m.ini=seg}
 async function salvarFotoCardapio(f,semana){
     if(S.mode==="db"&&S.assets){toast("Enviando…");
-      try{const r=await S.assets.upload(f);const m=S.menu,old=m.assetId;m.assetId=r.id;m.ini=hojeISO();m.isPdf=r.contentType==="application/pdf";delete m.localImg;m.semana=semana||m.semana;await saveMenu();
+      try{const r=await S.assets.upload(f);const m=S.menu,old=m.assetId;novaSemanaMenu(m,semana);m.assetId=r.id;m.isPdf=r.contentType==="application/pdf";delete m.localImg;await saveMenu();
         if(old&&old!==r.id&&old!==DEFAULT_MENU.assetId)S.assets.delete(old).catch(()=>{});toast("Cardápio salvo");render()}
       catch(err){toast(err&&err.code==="too_large"?"Arquivo grande demais (máx. 20 MB).":err&&err.code==="unsupported_type"?"Use uma foto PNG, JPG ou PDF.":"Não enviou. Tente de novo.")}}
     else{const url=await fotoReduzida(f);if(!url){toast("Não consegui abrir essa foto");return}const m=S.menu;
-      m.localImg=url;m.assetId=null;m.ini=hojeISO();m.isPdf=f.type==="application/pdf";if(semana)m.semana=semana;lsSave();toast(PWA?"Cardápio salvo":"Cardápio salvo neste navegador");render()}
+      novaSemanaMenu(m,semana);m.localImg=url;m.assetId=null;m.isPdf=f.type==="application/pdf";saveMenu();toast(PWA?"Cardápio salvo":"Cardápio salvo neste navegador");render()}
 }
 
 // ---------- Suplementos ----------
