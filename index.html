@@ -238,6 +238,43 @@ details.how summary{min-height:44px}
 #dgOk:disabled{opacity:.8}
 .timer.fim{background:#166534}
 .feitos:empty{display:none}
+/* Calendário de treinos */
+:root{--cal-ok:#dcfce7;--cal-ok-fg:#14532d;--cal-ok-line:#86efac;--cal-up:#15803d;--cal-up-fg:#fff;--cal-miss:#fee2e2;--cal-miss-fg:#7f1d1d;--cal-miss-line:#fca5a5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cal-ok:#14391f;--cal-ok-fg:#bbf7d0;--cal-ok-line:#166534;--cal-up:#22c55e;--cal-up-fg:#052e16;--cal-miss:#3f1a1a;--cal-miss-fg:#fecaca;--cal-miss-line:#7f1d1d}}
+:root[data-theme="dark"]{--cal-ok:#14391f;--cal-ok-fg:#bbf7d0;--cal-ok-line:#166534;--cal-up:#22c55e;--cal-up-fg:#052e16;--cal-miss:#3f1a1a;--cal-miss-fg:#fecaca;--cal-miss-line:#7f1d1d}
+.calnav{display:flex;align-items:center;gap:6px}
+.calnav button{min-width:44px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:20px}
+.calnav button:disabled{opacity:.35}
+.calnav b{min-width:120px;text-align:center}
+.resumo td{vertical-align:top}.resumo td small{display:block;color:var(--muted)}
+.resumo .mud{display:block;font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .wh{font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:2px 0}
+.cal button{aspect-ratio:1;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:600 14px var(--body);position:relative;padding:0}
+.cal button.ok{background:var(--cal-ok);color:var(--cal-ok-fg);border-color:var(--cal-ok-line)}
+.cal button.up{background:var(--cal-up);color:var(--cal-up-fg);border-color:var(--cal-up)}
+.cal button.miss{background:var(--cal-miss);color:var(--cal-miss-fg);border-color:var(--cal-miss-line)}
+.cal button.fut{opacity:.5}
+.cal button.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal button.sel{outline:2px solid var(--fg);outline-offset:1px}
+.cal button i{position:absolute;top:1px;right:4px;font-style:normal;font-size:11px}
+.calleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.calleg span{display:inline-flex;align-items:center;gap:6px}
+.calleg em{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid var(--line)}
+.calleg .ok{background:var(--cal-ok);border-color:var(--cal-ok-line)}.calleg .up{background:var(--cal-up);border-color:var(--cal-up)}.calleg .miss{background:var(--cal-miss);border-color:var(--cal-miss-line)}
+.calnum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+.calnum div{background:var(--surface-2);border-radius:8px;padding:8px 4px}
+.calnum b{display:block;font-family:var(--display);font-size:28px;line-height:1}
+.calnum small{color:var(--muted);font-size:12px}
+.caldia{background:var(--surface-2);border-radius:8px;padding:10px 12px;display:grid;gap:6px}
+.subiu{color:var(--ok);font-weight:700}
+.pts{display:grid;gap:8px;background:var(--surface-2);border-radius:8px;padding:12px}
+.pts .tot{font-family:var(--display);font-weight:800;font-size:34px;line-height:1}
+.pts .tot small{font-size:16px;color:var(--muted);font-weight:500}
+.pts .bar{height:10px}.pts ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px;font-size:13px}
+.pts li{display:flex;justify-content:space-between}.neg{color:var(--danger);font-weight:700}
+button.pill{font-family:var(--body);font-size:13px;cursor:pointer}
+.pill.pt{border-color:var(--cal-ok-line);background:var(--cal-ok);color:var(--cal-ok-fg)}
 </style>
 
 <header class="top">
@@ -409,7 +446,7 @@ const SUPL_TIPO={creatina:{t:"Creatina",dose:"3 a 5 g por dia, todo dia, em qual
 
 // ---------- Estado ----------
 const DEFAULT_PROFILE={sexo:"m",idade:24,peso:60,altura:166,atividade:1.55,superavit:300,protkg:2.0,gordkg:1.0};
-const S={supl:{},profile:{...DEFAULT_PROFILE},menu:JSON.parse(JSON.stringify(DEFAULT_MENU)),assets:null,days:{},mode:"local",col:null,tab:"hoje",date:hojeISO(),sessao:null,exSel:null,draft:{},open:{}};
+const S={supl:{},profile:{...DEFAULT_PROFILE},menu:JSON.parse(JSON.stringify(DEFAULT_MENU)),assets:null,days:{},mode:"local",col:null,tab:"hoje",date:hojeISO(),calMes:null,calDia:null,sessao:null,exSel:null,draft:{},open:{}};
 function hojeISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function fmtData(iso){const [y,m,d]=iso.split("-");return `${d}/${m}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -657,13 +694,15 @@ function vHoje(){
   const extras=meals.map((m,i)=>[m,i]).filter(([m])=>!m.plano);
   const treinoAberto=S.open.treino??(!salvo&&util), alimAberto=S.open.alim??true;
 
-  app.innerHTML=`
+  regCache={};const avRes=ehHoje?avisoResumo():"";
+  const ptsHoje=(()=>{const p=pontosMes(hojeISO().slice(0,7));return `<button class="pill pt" id="verPts" aria-label="Pontos do mês: ${p.total} de ${p.meta}"><b>${p.total}</b>/${p.meta} pontos</button>`})();regCache=null;
+  app.innerHTML=`${avRes}
   <section class="card">
     <div class="row between" style="align-items:flex-start">
       <div><div class="eyebrow">${DIAS_LONGO[w]} · ${fmtData(iso)}${ehHoje?"":" · outro dia"}</div>
         <div class="dayt">${util?P.nome:"Descanso"}</div>
         <span class="small muted">${util?P.foco:fal?`Repor em casa: ${PLAN[fal.sk].nome} (calistenia)`:"Opcional: treino de barra em casa"}</span></div>
-      <span class="pill"><b>${st}</b> ${st===1?"treino seguido":"treinos seguidos"}</span>
+      <div class="row" style="gap:6px;flex-direction:column;align-items:flex-end"><span class="pill"><b>${st}</b> ${st===1?"treino seguido":"treinos seguidos"}</span>${ptsHoje}</div>
     </div>
     <div class="row">
       <label>Peso de hoje (kg)<input id="pesoDia" inputmode="decimal" style="width:110px" value="${esc(day?.peso??"")}" placeholder="${esc(pesoAtual())}"></label>
@@ -715,6 +754,8 @@ function vHoje(){
     </div>
   </details>`;
 
+  bindAvisoResumo();
+  verPts.onclick=()=>{S.calMes=null;S.calDia=null;S.tab="progresso";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="progresso"));render();document.getElementById("cardCal")?.scrollIntoView({block:"start"})};
   secTreino.ontoggle=()=>{S.open.treino=secTreino.open};secAlim.ontoggle=()=>{S.open.alim=secAlim.open};
   secTreino.oninput=e=>{const t=e.target;if(/^(kg-|rp-|obs)/.test(t.id)){(S.draft[dk]||(S.draft[dk]={...dr}))[t.id]=t.value;salvarRascunho(iso,sk,dk);if(!WK.start&&ehHoje&&!salvo)wkStart();
     const m=t.id.match(/^(?:kg|rp)-(\d+)/);if(m)exAtual=+m[1];clearTimeout(RS.nt);RS.nt=setTimeout(notif,800)}};
@@ -921,6 +962,118 @@ async function acaoInicial(){
       document.getElementById("wMenu")?.scrollIntoView({block:"start"})}catch(e){toast("Não consegui abrir a foto.")}}
 }
 
+// ---------- Calendário de treinos e resumo do mês ----------
+// Séries registradas num dia: o treino salvo ou, se não salvou, o que foi digitado (rascunho)
+let regCache=null;
+function registrosDia(iso){
+  if(regCache&&regCache[iso])return regCache[iso];
+  const d=S.days[iso];let r=[];
+  if(d?.treino?.ex?.length)r=d.treino.ex.map(e=>({nome:e.nome,sets:(e.sets||[]).filter(s=>s&&s.reps)})).filter(e=>e.sets.length);
+  else if(d?.rascunho&&PLAN[d.rascunho.sessao]){const c=d.rascunho.campos||{};
+    r=PLAN[d.rascunho.sessao].ex.map(([nome,reps],i)=>{const kg=parseFloat(String(c[`kg-${i}`]??"").replace(",","."));
+      return {nome,sets:Array.from({length:nSets(reps)},(_,k)=>parseInt(c[`rp-${i}-${k}`])).filter(n=>n>0).map(n=>({kg:isNaN(kg)?null:kg,reps:n}))}}).filter(e=>e.sets.length)}
+  if(regCache)regCache[iso]=r;return r;
+}
+function melhorKg(e){return Math.max(0,...e.sets.map(s=>+s.kg||0))}
+// melhor série: a de maior carga e, nessa carga, a de mais repetições
+function melhorSerie(e){return e.sets.reduce((a,s)=>!a||(+s.kg||0)>(+a.kg||0)||((+s.kg||0)===(+a.kg||0)&&s.reps>a.reps)?s:a,null)}
+// exercícios em que a carga subiu em relação à última vez que foram feitos
+function aumentosDia(iso){
+  const ds=Object.keys(S.days).filter(d=>d<iso).sort().reverse(),out=[];
+  registrosDia(iso).forEach(e=>{const k=melhorKg(e);if(!k)return;
+    for(const d of ds){const a=registrosDia(d).find(x=>x.nome===e.nome);if(!a)continue;const ka=melhorKg(a);if(!ka)continue;if(k>ka)out.push({nome:e.nome,de:ka,para:k});break}});
+  return out;
+}
+function nomeSessaoDia(iso){const k=S.days[iso]?.treino?.sessao||S.days[iso]?.rascunho?.sessao;return PLAN[k]?.nome||""}
+function inicioRegistros(){return Object.keys(S.days).sort().find(d=>registrosDia(d).length)||null}
+// verde: pelo menos uma série; verde forte: carga maior; vermelho: dia de treino (seg a sex) que passou sem registro
+function statusDia(iso,hoje,ini){
+  if(registrosDia(iso).length)return aumentosDia(iso).length?"up":"ok";
+  const w=wd(iso);if(w>=1&&w<=5&&ini&&iso>=ini&&iso<hoje)return "miss";
+  return iso>hoje?"fut":"";
+}
+const MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function nomeMes(mes){const [y,m]=mes.split("-").map(Number);return MESES[m-1]+" de "+y}
+function cap(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+function kgTxt(n){return String(r1(+n)).replace(".",",")}
+function diasDoMes(mes){const [y,m]=mes.split("-").map(Number),n=new Date(y,m,0).getDate();return Array.from({length:n},(_,i)=>mes+"-"+String(i+1).padStart(2,"0"))}
+function mesAnterior(mes,n=-1){const [y,m]=mes.split("-").map(Number),d=new Date(y,m-1+n,15);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
+function contaMes(mes){const hoje=hojeISO(),ini=inicioRegistros(),c={ok:0,up:0,miss:0};
+  diasDoMes(mes).forEach(d=>{const st=statusDia(d,hoje,ini);if(st==="ok"||st==="up")c.ok++;if(st==="up")c.up++;if(st==="miss")c.miss++});return c}
+function cardCalendario(){
+  const hoje=hojeISO(),mesHoje=hoje.slice(0,7),mes=S.calMes&&S.calMes<=mesHoje?S.calMes:mesHoje,ini=inicioRegistros();
+  const dias=diasDoMes(mes),off=(wd(dias[0])+6)%7,c=contaMes(mes);
+  const rot={ok:"treinou",up:"treinou e aumentou a carga",miss:"faltou",fut:"",["" ]:"sem treino planejado"};
+  const cells=dias.map(d=>{const st=statusDia(d,hoje,ini);
+    return `<button class="${st}${d===hoje?" today":""}${d===S.calDia?" sel":""}" data-cal="${d}" aria-label="${DIAS[wd(d)]} ${fmtData(d)}${rot[st]?": "+rot[st]:""}">${+d.slice(8)}${st==="up"?'<i aria-hidden="true">↑</i>':""}</button>`}).join("");
+  let det="";
+  if(S.calDia&&S.calDia.slice(0,7)===mes){const d=S.calDia,st=statusDia(d,hoje,ini),ex=registrosDia(d),up=aumentosDia(d);
+    const pd=pontosDia(d,hoje,ini).total;
+    det=`<div class="caldia"><div class="row between"><b>${DIAS_LONGO[wd(d)]} · ${fmtData(d)}</b>${pd?`<b class="${pd>0?"subiu":"neg"}">${pd>0?"+":"−"}${Math.abs(pd)} pontos</b>`:""}</div>${
+      ex.length?`<span>${esc(nomeSessaoDia(d))} · ${ex.length} ${ex.length===1?"exercício":"exercícios"} · ${ex.reduce((a,e)=>a+e.sets.length,0)} séries</span>${up.map(u=>`<span class="subiu">↑ ${esc(u.nome)}: ${kgTxt(u.de)} → ${kgTxt(u.para)} kg</span>`).join("")}`
+      :st==="miss"?`<span>Faltou: nenhuma série registrada no ${esc(PLAN[sessaoDoDia(d)]?.nome||"treino")}.</span>`:`<span class="muted">Sem treino registrado.</span>`}
+      <div><button class="ghost" id="calAbrir">Abrir este dia</button></div></div>`}
+  return `<section class="card" id="cardCal">
+    <div class="row between"><h2>Calendário</h2><div class="calnav"><button id="calAnt" aria-label="Mês anterior">‹</button><b>${cap(nomeMes(mes))}</b><button id="calProx" aria-label="Próximo mês" ${mes>=mesHoje?"disabled":""}>›</button></div></div>
+    <div class="calnum"><div><b>${c.ok}</b><small>${c.ok===1?"dia de treino":"dias de treino"}</small></div><div><b>${c.miss}</b><small>${c.miss===1?"falta":"faltas"}</small></div><div><b>${c.up}</b><small>${c.up===1?"dia com carga maior":"dias com carga maior"}</small></div></div>
+    ${pontosHtml(mes)}
+    <div class="cal">${["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(x=>`<span class="wh">${x}</span>`).join("")}${'<span></span>'.repeat(off)}${cells}</div>
+    <div class="calleg"><span><em class="ok"></em>Treinou</span><span><em class="up"></em>↑ Carga maior</span><span><em class="miss"></em>Faltou</span><span><em></em>Descanso</span></div>
+    ${det}
+  </section>`;
+}
+// Resumo do mês: melhor série de cada exercício no começo e no fim do mês
+function cardResumoMes(mes){
+  const hoje=hojeISO(),dias=diasDoMes(mes).filter(d=>d<=hoje),c=contaMes(mes),parcial=mes===hoje.slice(0,7);
+  const por={};dias.forEach(d=>registrosDia(d).forEach(e=>{(por[e.nome]=por[e.nome]||[]).push({d,b:melhorSerie(e),tot:e.sets.reduce((a,s)=>a+s.reps,0)})}));
+  const fmt=b=>b?(+b.kg?`${kgTxt(b.kg)} kg × ${esc(b.reps)}`:`${esc(b.reps)} reps`):"-";
+  const linhas=Object.entries(por).map(([nome,v])=>{const a=v[0],z=v.at(-1),dk=(+z.b.kg||0)-(+a.b.kg||0),dr=z.b.reps-a.b.reps;
+    const mud=v.length<2?`<span class="mud muted">1 vez no mês</span>`:dk>0?`<span class="mud subiu">↑ +${kgTxt(dk)} kg</span>`:dk<0?`<span class="mud">${kgTxt(dk)} kg</span>`:dr>0?`<span class="mud subiu">↑ +${dr} reps</span>`:dr<0?`<span class="mud">${dr} reps</span>`:`<span class="mud muted">igual</span>`;
+    const ev=v.length>1&&(dk>0||(dk===0&&dr>0));
+    return {nome,dk,dr,ev,html:`<tr><td>${esc(nome)}<small>${v.length}× no mês</small></td><td class="r">${v.length<2?fmt(z.b):`${fmt(a.b)} → ${fmt(z.b)}`}${mud}</td></tr>`}});
+  linhas.sort((x,y)=>y.dk-x.dk||y.dr-x.dr);
+  const ev=linhas.filter(l=>l.ev),resto=linhas.filter(l=>!l.ev);
+  const tab=ls=>`<div class="tablewrap"><table class="resumo">${ls.map(l=>l.html).join("")}</table></div>`;
+  return `<section class="card" id="cardResumo"><div class="row between"><h2>Resumo de ${nomeMes(mes).split(" ")[0]}</h2>${parcial?`<span class="chip">até hoje</span>`:""}</div>
+    ${linhas.length?`<p>${(()=>{const p=pontosMes(mes);return `<b>${p.total} de ${p.meta} pontos</b>${p.total>=p.meta?" · meta batida 🎉":""}. `})()}${c.ok} ${c.ok===1?"treino":"treinos"}, ${c.miss} ${c.miss===1?"falta":"faltas"}. ${ev.length} de ${linhas.length} exercícios evoluíram em carga ou repetições.</p>
+    ${ev.length?`<h3>O que evoluiu</h3>${tab(ev)}`:""}
+    ${resto.length?`<details class="more"><summary>${ev.length?"Os outros":"Todos os"} ${resto.length} exercícios</summary>${tab(resto)}</details>`:""}
+    <p class="small muted">Melhor série (maior carga) da primeira e da última vez no mês.</p>`
+    :`<p class="empty">Nenhuma série registrada em ${nomeMes(mes).split(" ")[0]}.</p>`}
+  </section>`;
+}
+// Pontos: treino em dia útil +10, treino extra no fim de semana +5, cada exercício com carga maior +5, falta −10
+const PTS={treino:10,extra:5,carga:5,falta:-10};
+function pontosDia(iso,hoje,ini){const st=statusDia(iso,hoje,ini),w=wd(iso),fds=w===0||w===6,r={treino:0,extra:0,carga:0,falta:0};
+  if(st==="ok"||st==="up"){if(fds)r.extra=PTS.extra;else r.treino=PTS.treino;r.carga=aumentosDia(iso).length*PTS.carga}
+  if(st==="miss")r.falta=PTS.falta;r.total=r.treino+r.extra+r.carga+r.falta;return r}
+function metaMes(mes){return diasDoMes(mes).filter(d=>{const w=wd(d);return w>=1&&w<=5}).length*PTS.treino+20}
+function pontosMes(mes){const hoje=hojeISO(),ini=inicioRegistros(),t={treino:0,extra:0,carga:0,falta:0,total:0};
+  diasDoMes(mes).forEach(d=>{if(d>hoje)return;const p=pontosDia(d,hoje,ini);for(const k in t)t[k]+=p[k]});t.meta=metaMes(mes);return t}
+function pontosHtml(mes){const p=pontosMes(mes),pct=Math.max(0,Math.min(100,p.total/p.meta*100)),bateu=p.total>=p.meta,falta=p.meta-p.total;
+  return `<div class="pts" aria-label="Pontos do mês"><div class="row between"><div class="tot">${p.total} <small>de ${p.meta} pontos</small></div>${bateu?`<span class="chip">Meta batida 🎉</span>`:""}</div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <ul><li><span>Treinos (+10)</span><b>+${p.treino}</b></li><li><span>Carga maior (+5)</span><b>+${p.carga}</b></li><li><span>Fim de semana (+5)</span><b>+${p.extra}</b></li><li><span>Faltas (−10)</span><b class="${p.falta?"neg":""}">${p.falta?"−"+(-p.falta):"0"}</b></li></ul>
+    ${bateu?"":`<span class="small muted">Faltam ${falta} pontos para a meta${mes===hojeISO().slice(0,7)?" deste mês":""}.</span>`}</div>`}
+function bindCalendario(){
+  const mesHoje=hojeISO().slice(0,7),mes=S.calMes||mesHoje;
+  calAnt.onclick=()=>{S.calMes=mesAnterior(mes);S.calDia=null;render()};
+  calProx.onclick=()=>{S.calMes=mesAnterior(mes,1);S.calDia=null;render()};
+  app.querySelectorAll("[data-cal]").forEach(b=>b.onclick=()=>{S.calDia=S.calDia===b.dataset.cal?null:b.dataset.cal;render();document.querySelector(".caldia")?.scrollIntoView({block:"nearest"})});
+  if(window.calAbrir)calAbrir.onclick=()=>{S.date=S.calDia;S.sessao=null;S.open={};S.tab="hoje";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="hoje"));render();window.scrollTo(0,0)};
+}
+// Nos primeiros dias do mês, a aba Hoje avisa que o resumo do mês passado está pronto
+function avisoResumo(){
+  const hoje=hojeISO();if(+hoje.slice(8)>7)return "";const mp=mesAnterior(hoje.slice(0,7));
+  let visto="";try{visto=localStorage.getItem(LS+"-resumo")||""}catch(e){}
+  if(visto===mp||!diasDoMes(mp).some(d=>registrosDia(d).length))return "";
+  return `<section class="card"><div class="row between"><div><h3>Resumo de ${nomeMes(mp).split(" ")[0]} pronto</h3><span class="small muted">Treinos, faltas e quanto a carga subiu.</span></div>
+    <div class="row" style="gap:8px"><button class="btn" id="verResumo">Ver</button><button class="ghost" id="fechaResumo" aria-label="Dispensar aviso">×</button></div></div></section>`;
+}
+function bindAvisoResumo(){const mp=mesAnterior(hojeISO().slice(0,7));const visto=()=>{try{localStorage.setItem(LS+"-resumo",mp)}catch(e){}};
+  if(window.verResumo)verResumo.onclick=()=>{visto();S.calMes=mp;S.calDia=null;S.tab="progresso";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="progresso"));render();document.getElementById("cardResumo")?.scrollIntoView({block:"start"})};
+  if(window.fechaResumo)fechaResumo.onclick=()=>{visto();render()};}
+
 // ---------- Sequência ----------
 function addDias(iso,n){const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function wd(iso){return new Date(iso+"T12:00:00").getDay()}
@@ -1057,7 +1210,8 @@ function vProgresso(){
     const best=e.sets.filter(s=>s.kg&&s.reps).reduce((a,s)=>{const rm=s.kg*(1+s.reps/30);return rm>a.rm?{...s,rm}:a},{rm:0});
     return best.rm?[d,best]:null}).filter(Boolean):[];
   const recent=ds.slice().reverse().slice(0,30);
-  app.innerHTML=`${cardStreak()}
+  regCache={};const calHtml=cardCalendario()+cardResumoMes(S.calMes&&S.calMes<=hojeISO().slice(0,7)?S.calMes:hojeISO().slice(0,7));regCache=null;
+  app.innerHTML=`${cardStreak()}${calHtml}
   <section class="card"><div class="row between"><h2>Peso corporal</h2>${pesos.length?`<span class="chip p">${esc(pesos.at(-1)[1])} kg${pesos.length>1?` · ${(pesos.at(-1)[1]-pesos[0][1]>=0?"+":"")}${r1(pesos.at(-1)[1]-pesos[0][1])} kg`:""}</span>`:""}</div>
     ${pesos.length>=2?chart(pesos.map(([d,v])=>[d,v]),"kg"):`<p class="empty">Registre o peso em "Hoje" pelo menos 2 vezes para ver o gráfico. Dica: pese-se 1× por semana, em jejum. Meta para ganho limpo: +0,25 a 0,5 kg por semana.</p>`}
   </section>
@@ -1072,6 +1226,7 @@ function vProgresso(){
     </table></div>`:`<p class="empty">Seu histórico aparece aqui depois do primeiro treino ou refeição salva.</p>`}
   </section>`;
   if(window.exSel)exSel.onchange=e=>{S.exSel=e.target.value;render()};
+  bindCalendario();
 }
 
 function chart(pts,unit){
