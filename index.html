@@ -314,6 +314,10 @@ html[data-letra="grande"] body{zoom:1.12}
 #menu .sw{appearance:none;width:48px;height:28px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;flex:none;border:0;margin:0}
 #menu .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
 #menu .sw:checked{background:var(--accent)}#menu .sw:checked::after{left:23px}
+#menu label.mrow{display:flex;flex-direction:row;align-items:center;justify-content:space-between;font-size:15px;color:var(--fg);gap:12px}
+#menu label.mrow input.sw{width:48px;height:28px;min-height:0;padding:0;border:0;border-radius:99px;box-shadow:none}
+#menu label.mrow select{width:auto;flex:none}
+#menu .mtabs button{min-height:44px;font-size:15px}
 #menu .mfoot{font-size:13px;color:var(--muted)}
 body.menuaberto{overflow:hidden}
 </style>
@@ -586,9 +590,11 @@ const MENU_SUB=[["progresso","Calendário e pontos",()=>document.getElementById(
 function menuHtml(){
   const seg=(k,ops)=>`<div class="seg" role="group">${ops.map(([v,t])=>`<button data-cfg="${k}" data-v="${v}" aria-pressed="${CFG[k]===v}">${t}</button>`).join("")}</div>`;
   const cores=[["azul","#2346c4"],["verde","#15803d"],["laranja","#c2410c"],["roxo","#6d28d9"]];
+  const aba=S.menuAba||"nav";
   return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
-  <section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${n}</button>`).join("")}
-    ${MENU_SUB.map(([t,n],j)=>`<button class="sub" data-sub="${j}">${n}</button>`).join("")}</div></section>
+  <div class="seg mtabs" role="tablist"><button role="tab" data-maba="nav" aria-selected="${aba==="nav"}" aria-pressed="${aba==="nav"}">Navegar</button><button role="tab" data-maba="cfg" aria-selected="${aba==="cfg"}" aria-pressed="${aba==="cfg"}">Tema e ajustes</button></div>
+  ${aba==="nav"?`<section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${n}</button>`).join("")}
+    ${MENU_SUB.map(([t,n],j)=>`<button class="sub" data-sub="${j}">${n}</button>`).join("")}</div></section>`:`
   <section><h3>Tema</h3>${seg("tema",[["auto","Automático"],["light","Claro"],["dark","Escuro"]])}</section>
   <section><h3>Cor de destaque</h3><div class="cores">${cores.map(([v,c])=>`<button data-cfg="cor" data-v="${v}" aria-pressed="${CFG.cor===v}" aria-label="${cap(v)}" style="background:${c}"></button>`).join("")}</div></section>
   <section><h3>Tamanho da letra</h3>${seg("letra",[["normal","Normal"],["grande","Grande"]])}</section>
@@ -596,7 +602,7 @@ function menuHtml(){
     <label class="mrow"><span>Som no fim do descanso</span><input type="checkbox" class="sw" data-tg="som" ${CFG.som?"checked":""}></label>
     <label class="mrow"><span>Vibrar no fim do descanso</span><input type="checkbox" class="sw" data-tg="vibrar" ${CFG.vibrar?"checked":""}></label>
     <label class="mrow"><span>Tempo padrão</span><select id="cfgDesc">${[[0,"Pelo exercício"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[180,"3:00"]].map(([v,t])=>`<option value="${v}" ${+CFG.descanso===v?"selected":""}>${t}</option>`).join("")}</select></label>
-    <p class="small muted" style="margin:0">"Pelo exercício": 2:00 para até 8 repetições e 1:30 para mais.</p></section>
+    <p class="small muted" style="margin:0">"Pelo exercício": 2:00 para até 8 repetições e 1:30 para mais.</p></section>`}
   <p class="mfoot">${esc(document.getElementById("sync").textContent)} · As configurações ficam neste aparelho.</p>`;
 }
 function menuAbre(){menuBox.innerHTML=menuHtml();menu.hidden=false;document.body.classList.add("menuaberto");menuBtn.setAttribute("aria-expanded","true");
@@ -606,7 +612,8 @@ function menuAbre(){menuBox.innerHTML=menuHtml();menu.hidden=false;document.body
     if(typeof x==="string"){S.open[x]=true;irPara(t,()=>{const d={supl:"dSupl",perf:"dPerf",lem:"dLem",bkp:"dBkp"}[x];document.getElementById(d)?.scrollIntoView({block:"start"})})}else irPara(t,x)});
   menuBox.querySelectorAll("[data-cfg]").forEach(b=>b.onclick=()=>{CFG[b.dataset.cfg]=b.dataset.v;salvaCfg();menuAbre()});
   menuBox.querySelectorAll("[data-tg]").forEach(c=>c.onchange=()=>{CFG[c.dataset.tg]=c.checked;salvaCfg()});
-  cfgDesc.onchange=()=>{CFG.descanso=+cfgDesc.value;salvaCfg();if(S.tab==="hoje")render();toast("Descanso padrão salvo")};
+  menuBox.querySelectorAll("[data-maba]").forEach(b=>b.onclick=()=>{S.menuAba=b.dataset.maba;menuAbre();menuBox.querySelector(`[data-maba="${S.menuAba}"]`).focus()});
+  if(window.cfgDesc)cfgDesc.onchange=()=>{CFG.descanso=+cfgDesc.value;salvaCfg();if(S.tab==="hoje")render();toast("Descanso padrão salvo")};
   (menuBox.querySelector('[aria-current="page"]')||menuFecha).focus();
 }
 function menuFecha_(){menu.hidden=true;document.body.classList.remove("menuaberto");menuBtn.setAttribute("aria-expanded","false");menuBtn.focus()}
