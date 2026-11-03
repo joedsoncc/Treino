@@ -320,16 +320,34 @@ html[data-letra="grande"] body{zoom:1.12}
 #menu .mtabs button{min-height:44px;font-size:15px}
 #menu .mfoot{font-size:13px;color:var(--muted)}
 body.menuaberto{overflow:hidden}
+.brand{align-items:center;padding:8px 16px}
+.brand .sync{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.brand .tit{flex:1;display:grid;line-height:1.05;min-width:0}
+.brand .tit small{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.brand .tit small span{color:var(--accent)}
+.brand h1{font-size:26px}
+#menu .mnav h3{margin:12px 0 2px}
+.fis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fis label{min-width:0}
+.dif{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.dif.up{color:var(--ok)}.dif.down{color:var(--warn)}
+.cfgsec{display:grid;gap:10px}
+.cfgsec .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--surface-2);border-radius:10px;padding:4px}
+.cfgsec .seg button{min-height:44px;border:0;border-radius:8px;background:none;color:var(--fg);font:600 15px var(--body)}
+.cfgsec .seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15);color:var(--accent)}
+.cfgsec .cores{display:flex;gap:12px}
+.cfgsec .cores button{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);cursor:pointer}
+.cfgsec .cores button[aria-pressed="true"]{outline:3px solid var(--fg);outline-offset:2px}
+.cfgsec label.mrow{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font-size:15px;color:var(--fg)}
+.cfgsec label.mrow input.sw{appearance:none;-webkit-appearance:none;width:48px;height:28px;min-height:0;padding:0;border:0;border-radius:99px;background:var(--line);position:relative;cursor:pointer;flex:none;margin:0;box-shadow:none}
+.cfgsec label.mrow input.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+.cfgsec label.mrow input.sw:checked{background:var(--accent)}.cfgsec label.mrow input.sw:checked::after{left:23px}
+.cfgsec label.mrow select{width:auto;flex:none}
+.cfgsec h3{margin:0}
 </style>
 
 <header class="top">
-  <div class="brand"><h1>Caderno de <span>Treino</span></h1><span class="sync" id="sync">Carregando…</span><button class="menub" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span></button></div>
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="hoje" aria-selected="true">Hoje</button>
-    <button role="tab" data-tab="semana" aria-selected="false">Semana</button>
-    <button role="tab" data-tab="progresso" aria-selected="false">Progresso</button>
-    <button role="tab" data-tab="mais" aria-selected="false">Mais</button>
-  </nav>
+  <div class="brand"><div class="tit"><small>Caderno de <span>Treino</span></small><h1 id="telaNome">Hoje</h1></div><span class="sync" id="sync">Carregando…</span><button class="menub" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span></button></div>
 </header>
 
 <main class="wrap" id="app"></main>
@@ -501,7 +519,7 @@ const SUPL_TIPO={creatina:{t:"Creatina",dose:"3 a 5 g por dia, todo dia, em qual
 
 // ---------- Estado ----------
 const DEFAULT_PROFILE={sexo:"m",idade:24,peso:60,altura:166,atividade:1.55,superavit:300,protkg:2.0,gordkg:1.0};
-const S={supl:{},profile:{...DEFAULT_PROFILE},menu:JSON.parse(JSON.stringify(DEFAULT_MENU)),assets:null,days:{},mode:"local",col:null,tab:"hoje",date:hojeISO(),calMes:null,calDia:null,sessao:null,exSel:null,draft:{},open:{}};
+const S={supl:{},fisico:{},profile:{...DEFAULT_PROFILE},menu:JSON.parse(JSON.stringify(DEFAULT_MENU)),assets:null,days:{},mode:"local",col:null,tab:"hoje",date:hojeISO(),calMes:null,calDia:null,sessao:null,exSel:null,draft:{},open:{}};
 function hojeISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function fmtData(iso){const [y,m,d]=iso.split("-");return `${d}/${m}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -514,7 +532,8 @@ function metas(p){
   const prot=p.protkg*p.peso, gord=p.gordkg*p.peso, carb=Math.max(0,(kcal-prot*4-gord*9)/4);
   return {tmb,get,kcal,prot,gord,carb};
 }
-function pesoAtual(){const ds=Object.keys(S.days).sort().reverse();for(const d of ds){if(S.days[d].peso)return S.days[d].peso}return S.profile.peso}
+function pesoAtual(){let best=null;Object.keys(S.days).forEach(d=>{if(S.days[d].peso&&(!best||d>best[0]))best=[d,S.days[d].peso]});
+  Object.values(S.fisico||{}).forEach(f=>{if(f&&f.peso&&f.data&&(!best||f.data>best[0]))best=[f.data,f.peso]});return best?best[1]:S.profile.peso}
 function profileVivo(){return {...S.profile,peso:pesoAtual()}}
 
 // ---------- Persistência (db da página; cai para o navegador se indisponível) ----------
@@ -525,13 +544,13 @@ function normDay(d){if(!d||typeof d!=="object")return d;d.refeicoes=Array.isArra
 function normDays(o){const r={};Object.entries(o||{}).forEach(([k,d])=>{if(d&&typeof d==="object")r[k]=normDay(d)});return r}
 // Campos vazios do perfil voltam ao padrão em vez de virar null
 function perfilLimpo(p){const r={...DEFAULT_PROFILE};Object.entries(p||{}).forEach(([k,v])=>{if(k!=="kind"&&v!=null&&v!==""&&!(typeof v==="number"&&!isFinite(v)))r[k]=v});return r}
-function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.profile=perfilLimpo(j.profile);S.days=normDays(j.days);if(j.menu)S.menu=pickMenu(j.menu);if(j.supl)S.supl=j.supl}
+function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.profile=perfilLimpo(j.profile);S.days=normDays(j.days);if(j.menu)S.menu=pickMenu(j.menu);if(j.supl)S.supl=j.supl;if(j.fisico&&typeof j.fisico==="object")S.fisico=j.fisico}
   const img=localStorage.getItem(LS+"-img");if(img&&!S.menu.localImg)S.menu.localImg=img}catch(e){}}
 let lsAviso=0;
 function lsSave(){
   // a foto do cardápio fica numa chave separada: se ela não couber, os treinos e refeições continuam salvos
   const {localImg,...menu}=S.menu||{};
-  try{localStorage.setItem(LS,JSON.stringify({profile:S.profile,days:S.days,menu,supl:S.supl}))}
+  try{localStorage.setItem(LS,JSON.stringify({profile:S.profile,days:S.days,menu,supl:S.supl,fisico:S.fisico}))}
   catch(e){if(Date.now()-lsAviso>10000){lsAviso=Date.now();toast("Memória do celular cheia: NÃO salvou. Exporte um backup em Mais.")}return}
   try{if(localImg)localStorage.setItem(LS+"-img",localImg);else localStorage.removeItem(LS+"-img")}catch(e){toast("Foto do cardápio grande demais para guardar")}
 }
@@ -546,6 +565,7 @@ function writeDoc(id,body){
 function getDay(iso){return normDay(S.days[iso]||(S.days[iso]={kind:"day",date:iso,refeicoes:[]}))}
 function saveDay(iso){const d=S.days[iso];return writeDoc("d-"+iso,JSON.parse(JSON.stringify(d)))}
 function saveMenu(){return writeDoc("cardapio",JSON.parse(JSON.stringify(S.menu)))}
+function saveFisico(){return writeDoc("fisico",{kind:"fisico",meses:JSON.parse(JSON.stringify(S.fisico))})}
 function saveSupl(){return writeDoc("suplementos",{kind:"suplementos",items:JSON.parse(JSON.stringify(S.supl))})}
 function saveProfile(){return writeDoc("perfil",{kind:"perfil",...S.profile})}
 
@@ -557,15 +577,16 @@ async function init(){
     const uid=user?await user.id():null;
     if(!db||!uid)throw 0;
     S.col=db.collection("data/users/"+uid); S.mode="db";
-    claude.use("assets").then(a=>{S.assets=a;if(S.tab==="dieta")render()}).catch(()=>{});
+    claude.use("assets").then(a=>{S.assets=a;if(S.tab==="cardapio")render()}).catch(()=>{});
     let first=true;
     S.col.onSnapshot(snap=>{
-      const days={};let prof=null,supl=null,menu=null;
-      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(v.kind==="perfil")prof=v;else if(v.kind==="suplementos")supl=v;else if(v.kind==="cardapio")menu=v;else if(v.kind==="day"&&v.date)days[v.date]=normDay(JSON.parse(JSON.stringify(v)))});
+      const days={};let prof=null,supl=null,menu=null,fis=null;
+      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(v.kind==="perfil")prof=v;else if(v.kind==="suplementos")supl=v;else if(v.kind==="cardapio")menu=v;else if(v.kind==="fisico")fis=v;else if(v.kind==="day"&&v.date)days[v.date]=normDay(JSON.parse(JSON.stringify(v)))});
       if(first){ // migra o que estava só no navegador e ainda não existe na conta
         Object.keys(S.days).forEach(iso=>{if(!days[iso]){days[iso]=S.days[iso];saveDay(iso)}});
         if(!prof&&snap.empty&&Object.keys(S.days).length)saveProfile();
         if(!supl&&Object.keys(S.supl||{}).length)saveSupl();
+        if(!fis&&Object.keys(S.fisico||{}).length)saveFisico();
         first=false;}
       // o que ainda está sendo gravado fica como está na tela
       for(const iso in S.days)if(pend["d-"+iso]>0)days[iso]=S.days[iso];
@@ -573,6 +594,7 @@ async function init(){
       if(prof&&!(pend.perfil>0))S.profile=perfilLimpo(prof);
       if(supl&&!(pend.suplementos>0))S.supl=JSON.parse(JSON.stringify(supl.items||{}));
       if(menu&&!(pend.cardapio>0))S.menu=pickMenu(menu);
+      if(fis&&!(pend.fisico>0))S.fisico=JSON.parse(JSON.stringify(fis.meses||{}));
       setSync("✓ Salvo na conta"); try{render(true)}catch(e){console.error(e)}
     },()=>{S.mode="local";setSync("Salvo no navegador")});
     setSync("Sincronizando…");
@@ -581,56 +603,57 @@ async function init(){
 function setSync(t){document.getElementById("sync").textContent=t}
 let tt;function toast(t){const el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2200)}
 
-// ---------- Menu ☰: navegação e configurações ----------
-function irPara(tab,depois){S.tab=tab;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===tab));render();window.scrollTo(0,0);if(depois)depois()}
-const MENU_NAV=[["hoje","🏋️","Hoje"],["semana","📅","Semana e cardápio"],["progresso","📈","Progresso"],["mais","⋯","Mais"]];
-const MENU_SUB=[["progresso","Calendário e pontos",()=>document.getElementById("cardCal")?.scrollIntoView({block:"start"})],
-  ["semana","Cardápio do trabalho",()=>document.getElementById("wMenu")?.scrollIntoView({block:"start"})],
-  ["mais","Suplementos","supl"],["mais","Meus dados e metas","perf"],["mais","Lembretes","lem"],["mais","Backup","bkp"]];
+// ---------- Menu ☰: cada tela é uma opção, separadas por categoria ----------
+const TELAS={hoje:"Hoje",semana:"Plano de treino",progresso:"Calendário e cargas",corpo:"Evolução física",cardapio:"Cardápio do trabalho",supl:"Suplementos",lembretes:"Lembretes",backup:"Backup",ajustes:"Ajustes"};
+const MENU_CAT=[["Treino",["hoje","semana"]],["Progresso",["progresso","corpo"]],["Alimentação",["cardapio","supl"]],["App",["lembretes","backup","ajustes"]]];
+function irPara(tab,depois){S.tab=tab;render();window.scrollTo(0,0);if(depois)depois()}
 function menuHtml(){
-  const seg=(k,ops)=>`<div class="seg" role="group">${ops.map(([v,t])=>`<button data-cfg="${k}" data-v="${v}" aria-pressed="${CFG[k]===v}">${t}</button>`).join("")}</div>`;
-  const cores=[["azul","#2346c4"],["verde","#15803d"],["laranja","#c2410c"],["roxo","#6d28d9"]];
-  const aba=S.menuAba||"nav";
   return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
-  <div class="seg mtabs" role="tablist"><button role="tab" data-maba="nav" aria-selected="${aba==="nav"}" aria-pressed="${aba==="nav"}">Navegar</button><button role="tab" data-maba="cfg" aria-selected="${aba==="cfg"}" aria-pressed="${aba==="cfg"}">Tema e ajustes</button></div>
-  ${aba==="nav"?`<section><h3>Ir para</h3><div class="mnav">${MENU_NAV.map(([t,i,n])=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${n}</button>`).join("")}
-    ${MENU_SUB.map(([t,n],j)=>`<button class="sub" data-sub="${j}">${n}</button>`).join("")}</div></section>`:`
-  <section><h3>Tema</h3>${seg("tema",[["auto","Automático"],["light","Claro"],["dark","Escuro"]])}</section>
-  <section><h3>Cor de destaque</h3><div class="cores">${cores.map(([v,c])=>`<button data-cfg="cor" data-v="${v}" aria-pressed="${CFG.cor===v}" aria-label="${cap(v)}" style="background:${c}"></button>`).join("")}</div></section>
-  <section><h3>Tamanho da letra</h3>${seg("letra",[["normal","Normal"],["grande","Grande"]])}</section>
-  <section><h3>Descanso</h3>
-    <label class="mrow"><span>Som no fim do descanso</span><input type="checkbox" class="sw" data-tg="som" ${CFG.som?"checked":""}></label>
-    <label class="mrow"><span>Vibrar no fim do descanso</span><input type="checkbox" class="sw" data-tg="vibrar" ${CFG.vibrar?"checked":""}></label>
-    <label class="mrow"><span>Tempo padrão</span><select id="cfgDesc">${[[0,"Pelo exercício"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[180,"3:00"]].map(([v,t])=>`<option value="${v}" ${+CFG.descanso===v?"selected":""}>${t}</option>`).join("")}</select></label>
-    <p class="small muted" style="margin:0">"Pelo exercício": 2:00 para até 8 repetições e 1:30 para mais.</p></section>`}
-  <p class="mfoot">${esc(document.getElementById("sync").textContent)} · As configurações ficam neste aparelho.</p>`;
+  <nav class="mnav" aria-label="Telas">${MENU_CAT.map(([cat,ts])=>`<h3>${cat}</h3>${ts.map(t=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${TELAS[t]}</button>`).join("")}`).join("")}</nav>
+  <p class="mfoot">${esc(document.getElementById("sync").textContent)}</p>`;
 }
 function menuAbre(){menuBox.innerHTML=menuHtml();menu.hidden=false;document.body.classList.add("menuaberto");menuBtn.setAttribute("aria-expanded","true");
-  const fecha=()=>menuFecha_();menuFecha.onclick=fecha;
-  menuBox.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>{fecha();irPara(b.dataset.ir)});
-  menuBox.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{const [t,,x]=MENU_SUB[+b.dataset.sub];fecha();
-    if(typeof x==="string"){S.open[x]=true;irPara(t,()=>{const d={supl:"dSupl",perf:"dPerf",lem:"dLem",bkp:"dBkp"}[x];document.getElementById(d)?.scrollIntoView({block:"start"})})}else irPara(t,x)});
-  menuBox.querySelectorAll("[data-cfg]").forEach(b=>b.onclick=()=>{CFG[b.dataset.cfg]=b.dataset.v;salvaCfg();menuAbre()});
-  menuBox.querySelectorAll("[data-tg]").forEach(c=>c.onchange=()=>{CFG[c.dataset.tg]=c.checked;salvaCfg()});
-  menuBox.querySelectorAll("[data-maba]").forEach(b=>b.onclick=()=>{S.menuAba=b.dataset.maba;menuAbre();menuBox.querySelector(`[data-maba="${S.menuAba}"]`).focus()});
-  if(window.cfgDesc)cfgDesc.onchange=()=>{CFG.descanso=+cfgDesc.value;salvaCfg();if(S.tab==="hoje")render();toast("Descanso padrão salvo")};
+  menuFecha.onclick=menuFecha_;
+  menuBox.querySelectorAll("[data-ir]").forEach(b=>b.onclick=()=>{menuFecha_();irPara(b.dataset.ir)});
   (menuBox.querySelector('[aria-current="page"]')||menuFecha).focus();
 }
 function menuFecha_(){menu.hidden=true;document.body.classList.remove("menuaberto");menuBtn.setAttribute("aria-expanded","false");menuBtn.focus()}
 menuBtn.onclick=menuAbre;menuScrim.onclick=menuFecha_;
+// Ajustes: aparência e descanso (ficam neste aparelho)
+function cfgHtml(){
+  const seg=(k,ops)=>`<div class="seg" role="group">${ops.map(([v,t])=>`<button data-cfg="${k}" data-v="${v}" aria-pressed="${CFG[k]===v}">${t}</button>`).join("")}</div>`;
+  const cores=[["azul","#2346c4"],["verde","#15803d"],["laranja","#c2410c"],["roxo","#6d28d9"]];
+  return `<section class="card cfgsec"><h2>Aparência</h2>
+    <h3>Tema</h3>${seg("tema",[["auto","Automático"],["light","Claro"],["dark","Escuro"]])}
+    <h3>Cor de destaque</h3><div class="cores">${cores.map(([v,c])=>`<button data-cfg="cor" data-v="${v}" aria-pressed="${CFG.cor===v}" aria-label="${cap(v)}" style="background:${c}"></button>`).join("")}</div>
+    <h3>Tamanho da letra</h3>${seg("letra",[["normal","Normal"],["grande","Grande"]])}</section>
+  <section class="card cfgsec"><h2>Descanso</h2>
+    <label class="mrow"><span>Som no fim do descanso</span><input type="checkbox" class="sw" data-tg="som" ${CFG.som?"checked":""}></label>
+    <label class="mrow"><span>Vibrar no fim do descanso</span><input type="checkbox" class="sw" data-tg="vibrar" ${CFG.vibrar?"checked":""}></label>
+    <label class="mrow"><span>Tempo padrão</span><select id="cfgDesc">${[[0,"Pelo exercício"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[180,"3:00"]].map(([v,t])=>`<option value="${v}" ${+CFG.descanso===v?"selected":""}>${t}</option>`).join("")}</select></label>
+    <p class="small muted" style="margin:0">"Pelo exercício": 2:00 para até 8 repetições e 1:30 para mais. Aparência e descanso ficam salvos neste aparelho.</p></section>`;
+}
+function bindCfg(){
+  app.querySelectorAll("[data-cfg]").forEach(b=>b.onclick=()=>{CFG[b.dataset.cfg]=b.dataset.v;salvaCfg();render()});
+  app.querySelectorAll("[data-tg]").forEach(c=>c.onchange=()=>{CFG[c.dataset.tg]=c.checked;salvaCfg()});
+  cfgDesc.onchange=()=>{CFG.descanso=+cfgDesc.value;salvaCfg();toast("Descanso padrão salvo")};
+}
+function vAjustes(){app.innerHTML=`<div class="stack" id="wPerf"></div>${cfgHtml()}`;vPerfil(document.getElementById("wPerf"));bindCfg()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menu.hidden)menuFecha_()});
 
 // ---------- Render ----------
 const app=document.getElementById("app");
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));render();window.scrollTo(0,0)});
-const VIEWS={hoje:()=>vHoje(),semana:()=>vSemana(),progresso:()=>vProgresso(),mais:()=>vMais()};
+const VIEWS={hoje:()=>vHoje(),semana:()=>vPlano(app),progresso:()=>vProgresso(),corpo:()=>vCorpo(),cardapio:()=>vCardapio(app),supl:()=>vSupl(app),lembretes:()=>vLembretes(app),backup:()=>vBackup(),ajustes:()=>vAjustes()};
 try{const t=localStorage.getItem(LS+"-tab");if(t&&VIEWS[t]){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t))}}catch(e){}
 
 function render(fromSnap){
   // não redesenhar enquanto o usuário digita num campo do treino
   if(fromSnap&&document.activeElement&&app.contains(document.activeElement)&&document.activeElement.matches("input,select"))return;
   try{localStorage.setItem(LS+"-tab",S.tab)}catch(e){}
-  (VIEWS[S.tab]||VIEWS.hoje)();
+  if(!VIEWS[S.tab])S.tab="hoje";
+  telaNome.textContent=TELAS[S.tab];document.title=TELAS[S.tab]+" · Caderno de Treino";
+  VIEWS[S.tab]();
   if(PWA)appInfo();
 }
 
@@ -790,13 +813,13 @@ function vHoje(){
 
   regCache={};const avRes=ehHoje?avisoResumo():"";
   const ptsHoje=(()=>{const p=pontosMes(hojeISO().slice(0,7));return `<button class="pill pt" id="verPts" aria-label="Pontos do mês: ${p.total} de ${p.meta}"><b>${p.total}</b>/${p.meta} pontos</button>`})();regCache=null;
-  app.innerHTML=`${avRes}
+  app.innerHTML=`${avRes}${ehHoje?avisoFisico():""}
   <section class="card">
     <div class="row between" style="align-items:flex-start">
       <div><div class="eyebrow">${DIAS_LONGO[w]} · ${fmtData(iso)}${ehHoje?"":" · outro dia"}</div>
         <div class="dayt">${util?P.nome:"Descanso"}</div>
         <span class="small muted">${util?P.foco:fal?`Repor em casa: ${PLAN[fal.sk].nome} (calistenia)`:"Opcional: treino de barra em casa"}</span></div>
-      <div class="row" style="gap:6px;flex-direction:column;align-items:flex-end"><span class="pill"><b>${st}</b> ${st===1?"treino seguido":"treinos seguidos"}</span>${ptsHoje}</div>
+      <div class="row" style="gap:6px;flex-direction:column;align-items:flex-start"><span class="pill"><b>${st}</b> ${st===1?"treino seguido":"treinos seguidos"}</span>${ptsHoje}</div>
     </div>
     <div class="row">
       <label>Peso de hoje (kg)<input id="pesoDia" inputmode="decimal" style="width:110px" value="${esc(day?.peso??"")}" placeholder="${esc(pesoAtual())}"></label>
@@ -848,7 +871,7 @@ function vHoje(){
     </div>
   </details>`;
 
-  bindAvisoResumo();
+  bindAvisoResumo();bindAvisoFisico();
   verPts.onclick=()=>{S.calMes=null;S.calDia=null;S.tab="progresso";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="progresso"));render();document.getElementById("cardCal")?.scrollIntoView({block:"start"})};
   secTreino.ontoggle=()=>{S.open.treino=secTreino.open};secAlim.ontoggle=()=>{S.open.alim=secAlim.open};
   secTreino.oninput=e=>{const t=e.target;if(/^(kg-|rp-|obs)/.test(t.id)){(S.draft[dk]||(S.draft[dk]={...dr}))[t.id]=t.value;salvarRascunho(iso,sk,dk);if(!WK.start&&ehHoje&&!salvo)wkStart();
@@ -909,23 +932,16 @@ function vHoje(){
 }
 
 // ---------- Semana e Mais (agrupam telas) ----------
-function vSemana(){app.innerHTML=`<div class="stack" id="wPlano"></div><div class="stack" id="wMenu"></div>`;vPlano(document.getElementById("wPlano"));vCardapio(document.getElementById("wMenu"))}
-function vMais(){
-  app.innerHTML=`<details class="sec" id="dSupl" ${S.open.supl?"open":""}><summary><h2>Suplementos <small>creatina, whey, links e cupons</small></h2></summary><div class="secbody" id="wSupl"></div></details>
-  <details class="sec" id="dPerf" ${S.open.perf?"open":""}><summary><h2>Meus dados <small>peso, altura e metas</small></h2></summary><div class="secbody" id="wPerf"></div></details>
-  <details class="sec" id="dLem" ${S.open.lem?"open":""}><summary><h2>Lembretes <small>lanches, refeições e creatina</small></h2></summary><div class="secbody" id="wLem"></div></details>
-  <details class="sec" id="dBkp" ${S.open.bkp?"open":""}><summary><h2>Backup <small>levar seus dados para outro lugar</small></h2></summary><div class="secbody">
-    <p class="small muted">Exporte um arquivo com treinos, refeições, peso e suplementos. Importe esse arquivo ${PWA?"aqui":"no app instalável"} para continuar de onde parou.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="bkExp">Exportar dados</button><button class="ghost" id="bkImpB">Importar arquivo</button><input type="file" id="bkImp" accept=".json,application/json" hidden></div>
-  </div></details>`;
-  vSupl(document.getElementById("wSupl"));vPerfil(document.getElementById("wPerf"));
-  dSupl.ontoggle=()=>{S.open.supl=dSupl.open};dPerf.ontoggle=()=>{S.open.perf=dPerf.open};dBkp.ontoggle=()=>{S.open.bkp=dBkp.open};dLem.ontoggle=()=>{S.open.lem=dLem.open};vLembretes(wLem);
+function vBackup(){
+  app.innerHTML=`<section class="card"><h2>Backup</h2>
+    <p class="small muted">Exporte um arquivo com treinos, refeições, peso, medidas e suplementos. Importe esse arquivo ${PWA?"aqui":"no app instalável"} para continuar de onde parou.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="bkExp">Exportar dados</button><button class="ghost" id="bkImpB">Importar arquivo</button><input type="file" id="bkImp" accept=".json,application/json" hidden></div></section>`;
   bkExp.onclick=exportar;bkImpB.onclick=()=>bkImp.click();bkImp.onchange=()=>{const f=bkImp.files[0];if(f)importar(f);bkImp.value=""};
 }
 
 async function exportar(){
   const menu={...S.menu};delete menu.localImg;
-  const data=JSON.stringify({app:"caderno-de-treino",versao:1,exportado:new Date().toISOString(),profile:S.profile,days:S.days,menu,supl:S.supl},null,1);
+  const data=JSON.stringify({app:"caderno-de-treino",versao:1,exportado:new Date().toISOString(),profile:S.profile,days:S.days,menu,supl:S.supl,fisico:S.fisico},null,1);
   const nome="caderno-de-treino-"+hojeISO()+".json";
   try{if(window.claude&&claude.use){const dl=await claude.use("downloads");if(dl){await dl.save({filename:nome,data});toast("Arquivo exportado");return}}}
   catch(e){if(e&&e.code==="declined")return}
@@ -943,6 +959,7 @@ function importar(f){
       if(x.peso!=null)x.peso=num(x.peso);x.treino?.ex?.forEach(e=>e.sets=e.sets.map(s=>({kg:num(s?.kg),reps:num(s?.reps)})));S.days[iso]=x;saveDay(iso)}});
     if(j.profile&&typeof j.profile==="object"){S.profile=perfilLimpo(j.profile);saveProfile()}
     if(j.supl&&typeof j.supl==="object"){S.supl=j.supl;saveSupl()}
+    if(j.fisico&&typeof j.fisico==="object"){S.fisico={...S.fisico,...j.fisico};saveFisico()}
     if(j.menu&&j.menu.ini&&(!S.menu.ini||j.menu.ini>S.menu.ini)){S.menu=pickMenu(j.menu);if(PWA)delete S.menu.assetId;saveMenu()}
     lsSave();toast(n===1?"1 dia importado":n+" dias importados");render();
   };
@@ -1030,7 +1047,7 @@ async function lemPeriodico(){
   try{if(!SWR||!SWR.periodicSync)return "sem";const st=await navigator.permissions.query({name:"periodic-background-sync"});
     if(st.state!=="granted")return "negado";await SWR.periodicSync.register("lembretes",{minInterval:15*60*1000});return "ok"}catch(e){return "sem"}
 }
-function vLembretes(root){
+function vLembretes(root){root.innerHTML=`<section class="card" id="lemCard"></section>`;root=document.getElementById("lemCard");
   if(!PWA){root.innerHTML=`<p class="small muted">Os lembretes funcionam só no app instalado (joedsoncc.github.io/Treino).</p>`;return}
   const perm=window.Notification?Notification.permission:"unsupported";
   root.innerHTML=`<p class="small muted">Com o app aberto ou em segundo plano o aviso chega na hora. Com o app fechado, quem decide é o Android: pode chegar atrasado ou não chegar. O lembrete não aparece se você já marcou a refeição ou a creatina.</p>
@@ -1050,7 +1067,7 @@ async function acaoInicial(){
   const vai=t=>{S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t))};
   if(a==="treino"){vai("hoje");S.date=hojeISO();S.open.treino=true;render();wkStart();document.getElementById("secTreino")?.scrollIntoView({block:"start"})}
   else if(a==="refeicao"){vai("hoje");S.date=hojeISO();S.open.alim=true;render();const el=document.getElementById("secAlim");el?.scrollIntoView({block:"start"})}
-  else if(a==="cardapio"){vai("semana");render();
+  else if(a==="cardapio"){vai("cardapio");render();
     try{const c=await caches.open("treino-estado"),r=await c.match("./__compartilhado");if(!r){toast("Não recebi a foto. Tente compartilhar de novo.");return}
       const b=await r.blob();await c.delete("./__compartilhado");await salvarFotoCardapio(new File([b],"cardapio",{type:b.type||"image/jpeg"}));
       document.getElementById("wMenu")?.scrollIntoView({block:"start"})}catch(e){toast("Não consegui abrir a foto.")}}
@@ -1167,6 +1184,37 @@ function avisoResumo(){
 function bindAvisoResumo(){const mp=mesAnterior(hojeISO().slice(0,7));const visto=()=>{try{localStorage.setItem(LS+"-resumo",mp)}catch(e){}};
   if(window.verResumo)verResumo.onclick=()=>{visto();S.calMes=mp;S.calDia=null;S.tab="progresso";document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="progresso"));render();document.getElementById("cardResumo")?.scrollIntoView({block:"start"})};
   if(window.fechaResumo)fechaResumo.onclick=()=>{visto();render()};}
+
+// ---------- Evolução física (status do mês) ----------
+const MEDIDAS=[["peso","Peso","kg",true],["cintura","Cintura","cm",false],["braco","Braço contraído","cm",true],["peito","Peito","cm",true],["coxa","Coxa","cm",true],["gordura","Gordura (opcional)","%",false]];
+function vCorpo(){
+  const mes=hojeISO().slice(0,7),ms=Object.keys(S.fisico).filter(m=>S.fisico[m]).sort(),atual=S.fisico[mes]||{},ant=S.fisico[ms.filter(m=>m<mes).at(-1)]||{};
+  const n=v=>v==null||v===""?"":String(v).replace(".",",");
+  const dif=(k,a,b,bom)=>{if(a==null||b==null)return "";const d=r1(a-b);if(!d)return `<span class="dif">igual</span>`;return `<span class="dif ${bom?(d>0?"up":"down"):""}">${d>0?"+":""}${String(d).replace(".",",")}</span>`};
+  const linhas=ms.slice().reverse().map((m,i,arr)=>{const f=S.fisico[m],p=S.fisico[arr[i+1]]||{};
+    return `<tr><td>${cap(nomeMes(m).split(" ")[0]).slice(0,3)}/${m.slice(2,4)}</td>${MEDIDAS.slice(0,5).map(([k,,,bom])=>`<td class="r">${f[k]!=null?n(f[k]):"-"}${dif(k,f[k],p[k],bom)}</td>`).join("")}</tr>`}).join("");
+  const pesos=ms.filter(m=>S.fisico[m].peso).map(m=>[m+"-01",S.fisico[m].peso]);
+  app.innerHTML=`<section class="card"><div class="row between"><h2>Status de ${nomeMes(mes).split(" ")[0]}</h2>${S.fisico[mes]?`<span class="chip">✓ Atualizado</span>`:`<span class="chip">Pendente</span>`}</div>
+    <p class="small muted">Uma vez por mês, de manhã e em jejum. Os campos vazios mostram o valor do mês anterior.</p>
+    <div class="fis">${MEDIDAS.map(([k,t,u])=>`<label>${t} (${u})<input id="fz-${k}" inputmode="decimal" value="${esc(n(atual[k]))}" placeholder="${esc(n(ant[k])||"–")}"></label>`).join("")}</div>
+    <details class="how"><summary>Como medir</summary><ul><li>Cintura: na altura do umbigo, barriga relaxada.</li><li>Braço: o maior ponto do bíceps contraído, sempre o mesmo lado.</li><li>Peito: na linha dos mamilos, braços soltos.</li><li>Coxa: o ponto mais grosso, em pé.</li></ul></details>
+    <div><button class="btn" id="fzSalvar">Salvar status do mês</button></div></section>
+  <section class="card"><h2>Mês a mês</h2>
+    ${pesos.length>=2?chart(pesos,"kg"):""}
+    ${ms.length?`<div class="tablewrap"><table><tr><th>Mês</th><th class="r">Peso</th><th class="r">Cintura</th><th class="r">Braço</th><th class="r">Peito</th><th class="r">Coxa</th></tr>${linhas}</table></div>
+      <p class="small muted">Verde: subiu onde é bom subir para ganho de massa.</p>`:`<p class="empty">Salve o status deste mês para começar o acompanhamento.</p>`}</section>`;
+  fzSalvar.onclick=()=>{const r={data:hojeISO()};let algum=false;
+    MEDIDAS.forEach(([k])=>{const v=parseFloat(String(document.getElementById("fz-"+k).value).replace(",","."));if(v>0){r[k]=v;algum=true}});
+    if(!algum){toast("Preencha pelo menos o peso");return}
+    S.fisico[mes]=r;saveFisico();toast("Status de "+nomeMes(mes).split(" ")[0]+" salvo");render()};
+}
+// Aviso na aba Hoje até o status do mês ser atualizado ("Depois" esconde por 3 dias)
+function avisoFisico(){const mes=hojeISO().slice(0,7);if(S.fisico[mes])return "";
+  let ate="";try{ate=localStorage.getItem(LS+"-fisDepois")||""}catch(e){}if(ate&&hojeISO()<ate)return "";
+  return `<section class="card"><div class="row between"><div><h3>Atualize seu status físico de ${nomeMes(mes).split(" ")[0]}</h3><span class="small muted">Peso e medidas, uma vez por mês.</span></div>
+    <div class="row" style="gap:8px"><button class="btn" id="fisIr">Atualizar</button><button class="ghost" id="fisDepois">Depois</button></div></div></section>`}
+function bindAvisoFisico(){if(window.fisIr)fisIr.onclick=()=>irPara("corpo");
+  if(window.fisDepois)fisDepois.onclick=()=>{try{localStorage.setItem(LS+"-fisDepois",addDias(hojeISO(),3))}catch(e){}render()}}
 
 // ---------- Sequência ----------
 function addDias(iso,n){const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
