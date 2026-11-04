@@ -349,6 +349,7 @@ body.menuaberto{overflow:hidden}
 
 <header class="top">
   <div class="brand"><div class="tit"><small>Caderno de <span>Treino</span></small><h1 id="telaNome">Hoje</h1></div><span class="sync" id="sync">Carregando…</span><button class="menub" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span></button></div>
+  <nav class="tabs" id="ctabs" role="tablist" hidden></nav>
 </header>
 
 <main class="wrap" id="app"></main>
@@ -637,10 +638,16 @@ let tt;function toast(t){const el=document.getElementById("toast");el.textConten
 // ---------- Menu ☰: cada tela é uma opção, separadas por categoria ----------
 const TELAS={hoje:"Hoje",semana:"Plano de treino",progresso:"Calendário e cargas",corpo:"Evolução física",supl:"Suplementos",lembretes:"Lembretes",backup:"Backup",ajustes:"Ajustes"};
 const MENU_CAT=[["Treino",["hoje","semana"]],["Progresso",["progresso","corpo"]],["Alimentação",["supl"]],["App",["lembretes","backup","ajustes"]]];
+const catDe=t=>MENU_CAT.find(([,ts])=>ts.includes(t))||MENU_CAT[0];
+function ultimaDe(cat){let u={};try{u=JSON.parse(localStorage.getItem(LS+"-catTab")||"{}")}catch(e){}const ts=MENU_CAT.find(c=>c[0]===cat)[1];return ts.includes(u[cat])?u[cat]:ts[0]}
+function guardaCat(){try{const u=JSON.parse(localStorage.getItem(LS+"-catTab")||"{}");u[catDe(S.tab)[0]]=S.tab;localStorage.setItem(LS+"-catTab",JSON.stringify(u))}catch(e){}}
+function abasHtml(){const [cat,ts]=catDe(S.tab);ctabs.hidden=ts.length<2;ctabs.setAttribute("aria-label",cat);
+  ctabs.innerHTML=ts.length<2?"":ts.map(t=>`<button role="tab" data-aba="${t}" aria-selected="${S.tab===t}">${TELAS[t]}</button>`).join("");
+  ctabs.querySelectorAll("[data-aba]").forEach(b=>b.onclick=()=>irPara(b.dataset.aba))}
 function irPara(tab,depois){S.tab=tab;render();window.scrollTo(0,0);if(depois)depois()}
 function menuHtml(){
   return `<div class="mh"><h2>Menu</h2><button class="mclose" id="menuFecha" aria-label="Fechar menu">×</button></div>
-  <nav class="mnav" aria-label="Telas">${MENU_CAT.map(([cat,ts])=>`<h3>${cat}</h3>${ts.map(t=>`<button data-ir="${t}" ${S.tab===t?'aria-current="page"':""}>${TELAS[t]}</button>`).join("")}`).join("")}</nav>
+  <nav class="mnav" aria-label="Categorias">${MENU_CAT.map(([cat,ts])=>`<button data-ir="${ts.includes(S.tab)?S.tab:ultimaDe(cat)}" ${ts.includes(S.tab)?'aria-current="page"':""}>${cat}</button>`).join("")}</nav>
   <p class="mfoot">${esc(document.getElementById("sync").textContent)}</p>`;
 }
 function menuAbre(){menuBox.innerHTML=menuHtml();menu.hidden=false;document.body.classList.add("menuaberto");menuBtn.setAttribute("aria-expanded","true");
@@ -683,7 +690,7 @@ function render(fromSnap){
   if(fromSnap&&document.activeElement&&app.contains(document.activeElement)&&document.activeElement.matches("input,select"))return;
   try{localStorage.setItem(LS+"-tab",S.tab)}catch(e){}
   if(!VIEWS[S.tab])S.tab="hoje";
-  telaNome.textContent=TELAS[S.tab];document.title=TELAS[S.tab]+" · Caderno de Treino";
+  {const cat=catDe(S.tab)[0];telaNome.textContent=cat;document.title=TELAS[S.tab]+" · Caderno de Treino";guardaCat();abasHtml()}
   VIEWS[S.tab]();
   if(PWA)appInfo();
 }
